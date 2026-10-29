@@ -55,7 +55,7 @@ function matchNigerianState(value?: string): string {
 }
 
 export default function CheckoutPage() {
-  const { cart, subtotal } = useStore();
+  const { cart, subtotal, clearCart } = useStore();
 
   const [form, setForm] = useState({
     fullName: "",
@@ -350,15 +350,63 @@ export default function CheckoutPage() {
         );
       }
 
-      if (
-        !data.checkoutUrl ||
-        !/^https:\/\//i.test(data.checkoutUrl)
-      ) {
+      let isValidUrl = false;
+      if (data.checkoutUrl) {
+        if (/^https:\/\//i.test(data.checkoutUrl)) {
+          isValidUrl = true;
+        } else {
+          try {
+            const url = new URL(data.checkoutUrl, window.location.origin);
+            if (url.origin === window.location.origin) {
+              isValidUrl = true;
+            }
+          } catch {
+            isValidUrl = false;
+          }
+        }
+      }
+
+      if (!isValidUrl || !data.checkoutUrl) {
         throw new Error(
           "The payment service has not returned a valid checkout link. No payment has been confirmed."
         );
       }
 
+      const targetUrl = new URL(data.checkoutUrl, window.location.origin);
+      const orderId = targetUrl.searchParams.get("ref") || "";
+
+      const savedOrder = {
+        orderId,
+        customerName: form.fullName.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        address: [form.address.trim(), form.city.trim(), form.state]
+          .filter(Boolean)
+          .join(", "),
+        paymentMethod: form.paymentMethod,
+        total: finalTotal,
+        subtotal: subtotal,
+        shippingCost: shippingCost,
+        discountAmount: 0,
+        items: cart.map((item) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+          color: item.color,
+          size: item.size,
+        })),
+        date: new Date().toISOString(),
+      };
+
+      try {
+        sessionStorage.setItem("last_store_order", JSON.stringify(savedOrder));
+      } catch {
+        // Continue if sessionStorage is restricted
+      }
+
+      clearCart();
       window.location.assign(data.checkoutUrl);
     } catch (error) {
       setSubmitError(
