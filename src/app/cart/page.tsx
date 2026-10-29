@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 
 import { useStore } from "@/components/store-provider";
-import { formatPrice } from "@/lib/store-data";
+import { formatPrice } from "@/lib/format";
 
 export default function CartPage() {
   const { cart, updateCartQuantity, removeFromCart, subtotal, clearCart } = useStore();
@@ -88,6 +88,11 @@ export default function CartPage() {
                       {item.name}
                     </Link>
                     <p className="mt-0.5 text-xs text-[color:var(--brand-charcoal)]/65">
+                      {item.type && (
+                        <>
+                          Type: <span className="font-medium text-[color:var(--brand-deep)]">{item.type}</span> •{" "}
+                        </>
+                      )}
                       Colour: <span className="font-medium text-[color:var(--brand-deep)]">{item.color}</span> • Size:{" "}
                       <span className="font-medium text-[color:var(--brand-deep)]">{item.size}</span>
                     </p>

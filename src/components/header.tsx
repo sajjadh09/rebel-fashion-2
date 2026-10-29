@@ -5,30 +5,33 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import {
-  ChevronDown,
   Heart,
   Menu,
   Search,
   ShoppingBag,
+  Store,
+  User,
   X,
 } from "lucide-react";
 
 import { useStore } from "@/components/store-provider";
 import AnimatedLogo from "@/components/animated-logo";
+import { SITE_NAME } from "@/lib/config";
 
-const categoryItems = [
-  { href: "/shop?category=graphic-tees", label: "Graphic Tees" },
-  { href: "/shop?category=hoodies", label: "Streetwear" },
-  { href: "/shop?category=cargos", label: "Cargos & Denim" },
-  { href: "/shop?category=co-ords", label: "Co-Ords & Sets" },
-  { href: "/shop?category=blazers", label: "Tailoring" },
-  { href: "/shop?category=accessories", label: "Accessories" },
-];
-
+/** Main navigation, in order. "Home" is first and "Admin" is always last. */
 const navItems = [
   { href: "/", label: "Home" },
-  { href: "/shop", label: "Shop All" },
+  { href: "/shop", label: "Shop" },
+  { href: "/sell", label: `Sell on ${SITE_NAME}` },
+  { href: "/admin/login", label: "Admin" },
 ];
+
+function isActive(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  if (href === "/sell") return pathname === "/sell" || pathname.startsWith("/seller");
+  if (href === "/admin/login") return pathname.startsWith("/admin");
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function Header() {
   const pathname = usePathname();
@@ -36,7 +39,6 @@ export function Header() {
   const { itemCount, wishlist, openCart } = useStore();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [search, setSearch] = useState("");
 
   const onSearch = (event: FormEvent<HTMLFormElement>) => {
@@ -75,51 +77,10 @@ export function Header() {
             </Link>
           </div>
 
-          <nav className="hidden items-center gap-1 lg:flex">
+          <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
             {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-wider ${
-                  pathname === item.href
-                    ? "bg-[color:var(--brand-primary)] text-[color:var(--brand-deep)]"
-                    : "text-[color:var(--brand-charcoal)]/80 hover:bg-[color:var(--brand-soft)]/60"
-                }`}
-              >
-                {item.label}
-              </Link>
+              <NavLink key={item.href} href={item.href} label={item.label} active={isActive(pathname, item.href)} />
             ))}
-
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setCategoriesOpen((value) => !value)}
-                aria-expanded={categoriesOpen}
-                className="inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]/80 hover:bg-[color:var(--brand-soft)]/60"
-              >
-                Categories
-                <ChevronDown
-                  className={`h-3.5 w-3.5 transition ${
-                    categoriesOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              {categoriesOpen && (
-                <div className="absolute left-0 top-full mt-2 w-56 rounded-2xl border border-[color:var(--brand-border)] bg-white p-2 shadow-xl">
-                  {categoryItems.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setCategoriesOpen(false)}
-                      className="block rounded-xl px-3 py-2.5 text-xs font-semibold text-[color:var(--brand-charcoal)] hover:bg-[color:var(--brand-soft)]/50"
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
           </nav>
 
           <div className="hidden max-w-xs flex-1 justify-center md:flex">
@@ -133,7 +94,7 @@ export function Header() {
                   id="header-search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search products..."
+                  placeholder="Search the shop..."
                   className="w-full min-w-0 bg-transparent text-xs outline-none"
                 />
               </div>
@@ -142,8 +103,16 @@ export function Header() {
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             <Link
+              href="/account"
+              className="hidden h-10 w-10 items-center justify-center rounded-full border border-[color:var(--brand-border)] bg-white text-[color:var(--brand-deep)] sm:inline-flex"
+              aria-label="Account"
+            >
+              <User className="h-4 w-4" />
+            </Link>
+
+            <Link
               href="/wishlist"
-              className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--brand-border)] bg-white text-[color:var(--brand-deep)]"
+              className="relative hidden h-10 w-10 items-center sm:inline-flex justify-center rounded-full border border-[color:var(--brand-border)] bg-white text-[color:var(--brand-deep)]"
               aria-label="Saved Items"
             >
               <Heart className="h-4 w-4" />
@@ -152,6 +121,15 @@ export function Header() {
                   {wishlist.length}
                 </span>
               )}
+            </Link>
+
+            <Link
+              href="/seller/signup"
+              className="inline-flex h-10 items-center gap-1.5 rounded-full border border-[color:var(--brand-deep)] bg-[color:var(--brand-deep)] px-3 text-[11px] font-bold uppercase tracking-wider text-white transition hover:bg-[color:var(--brand-chocolate)] sm:px-4"
+            >
+              <Store className="h-4 w-4 shrink-0" />
+              <span className="sm:hidden">Sell</span>
+              <span className="hidden sm:inline">Sell with us</span>
             </Link>
 
             <button
@@ -183,7 +161,7 @@ export function Header() {
                   id="mobile-search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search products..."
+                  placeholder="Search the shop..."
                   className="w-full min-w-0 bg-transparent text-sm outline-none"
                 />
               </div>
@@ -201,22 +179,13 @@ export function Header() {
                 </Link>
               ))}
 
-              <div className="border-t border-[color:var(--brand-border)] pt-2">
-                <p className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-primary)]">
-                  Categories
-                </p>
-
-                {categoryItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMenuOpen(false)}
-                    className="block rounded-xl px-3 py-2.5 text-sm font-medium"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
+              <Link
+                href="/seller/signup"
+                onClick={() => setMenuOpen(false)}
+                className="mt-1 flex items-center justify-center gap-2 rounded-full bg-[color:var(--brand-deep)] px-4 py-3 text-xs font-bold uppercase tracking-wider text-white"
+              >
+                <Store className="h-4 w-4" /> Create seller account
+              </Link>
 
               <div className="flex items-center justify-between border-t border-[color:var(--brand-border)] px-3 pt-3 text-sm font-medium">
                 <button
@@ -235,11 +204,30 @@ export function Header() {
                 >
                   Wishlist ({wishlist.length})
                 </Link>
+
+                <Link href="/account" onClick={() => setMenuOpen(false)}>
+                  Account
+                </Link>
               </div>
             </div>
           </div>
         )}
       </div>
     </header>
+  );
+}
+
+function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-wider ${
+        active
+          ? "bg-[color:var(--brand-primary)] text-[color:var(--brand-deep)]"
+          : "text-[color:var(--brand-charcoal)]/80 hover:bg-[color:var(--brand-soft)]/60"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }

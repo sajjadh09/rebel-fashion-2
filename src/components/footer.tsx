@@ -1,16 +1,13 @@
 import Link from "next/link";
 import { Lock, ShieldCheck } from "lucide-react";
 import AnimatedLogo from "@/components/animated-logo";
-
+import { PLATFORM_COMMISSION_PERCENT, SITE_NAME } from "@/lib/config";
 const footerShopLinks = [
-  { href: "/shop?category=graphic-tees", label: "Oversized Graphic Tees" },
-  { href: "/shop?category=plain-tees", label: "Premium Plain T-Shirts" },
-  { href: "/shop?category=hoodies", label: "Streetwear Hoodies" },
-  { href: "/shop?category=cargos", label: "Cargo Trousers" },
-  { href: "/shop?category=jeans", label: "Relaxed-Fit Jeans" },
-  { href: "/shop?category=co-ords", label: "Matching Co-Ord Sets" },
-  { href: "/shop?category=blazers", label: "Lightweight Blazers" },
-  { href: "/shop?category=accessories", label: "Sneakers & Accessories" },
+  { href: "/shop", label: "Shop all" },
+  { href: "/shop?gender=men", label: "Men" },
+  { href: "/shop?gender=women", label: "Women" },
+  { href: "/shop?gender=kids", label: "Kids" },
+  { href: "/#now-in-kaftans", label: "Now in: Kaftans" },
 ];
 
 export function Footer() {
@@ -25,16 +22,14 @@ export function Footer() {
             </Link>
 
             <p className="max-w-sm text-xs leading-relaxed text-[color:var(--brand-charcoal)]/75">
-              A clean, modern storefront built for curated fashion and gifting selections. Product, category, and account flows are ready to connect to backend APIs.
+              {SITE_NAME} is a fashion store for everyone: clothing and accessories from our own collection and from approved independent sellers across Nigeria.
             </p>
-
-            <p className="text-xs text-[color:var(--brand-charcoal)]/70">Need assistance? Contact support through your connected backend channels.</p>
           </div>
 
           {/* Curated Categories */}
           <div className="space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-deep)]">
-              Curated Collections
+              Shop
             </h3>
             <ul className="grid grid-cols-1 gap-2.5 text-xs text-[color:var(--brand-charcoal)]/75">
               {footerShopLinks.map((item) => (
@@ -46,8 +41,6 @@ export function Footer() {
               ))}
             </ul>
           </div>
-
-          {/* Client Concierge */}
 
           {/* Client Concierge */}
           <div className="space-y-4">
@@ -71,8 +64,18 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/checkout" className="hover:text-[color:var(--brand-primary)] transition">
-                  Express Checkout
+                <Link href="/sell" className="hover:text-[color:var(--brand-primary)] transition">
+                  Sell on {SITE_NAME} ({PLATFORM_COMMISSION_PERCENT}% commission)
+                </Link>
+              </li>
+              <li>
+                <Link href="/seller/login" className="hover:text-[color:var(--brand-primary)] transition">
+                  Seller login
+                </Link>
+              </li>
+              <li>
+                <Link href="/admin/login" className="hover:text-[color:var(--brand-primary)] transition">
+                  Admin
                 </Link>
               </li>
             </ul>
@@ -90,7 +93,7 @@ export function Footer() {
                 <span>Secure Payment Gateway</span>
               </div>
               <p className="text-[11px] text-[color:var(--brand-charcoal)]/70 leading-relaxed">
-                256-bit SSL protection for card and transfer payments.
+                Payments are processed by Paystack. Sellers are paid directly to their bank accounts.
               </p>
               <div className="flex flex-wrap gap-1.5 pt-1 text-[10px] font-semibold text-[color:var(--brand-deep)]">
                 <span className="rounded bg-white px-2 py-0.5 border border-[color:var(--brand-border)]">Mastercard</span>
@@ -104,7 +107,7 @@ export function Footer() {
 
         {/* Bottom Legal / Copyright */}
         <div className="mt-14 flex flex-col gap-3 border-t border-[color:var(--brand-border)] pt-6 text-xs text-[color:var(--brand-charcoal)]/60 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 Storefront. All rights reserved.</p>
+          <p>© 2026 {SITE_NAME}. All rights reserved.</p>
           <p className="flex items-center gap-1">
             <Lock className="h-3 w-3" />
             <span>Encrypted ecommerce platform</span>

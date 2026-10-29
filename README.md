@@ -1,7 +1,36 @@
 
 # Rebel Fashion
 
-A modern, responsive fashion e-commerce storefront built with Next.js, TypeScript, and Tailwind CSS.
+A multi-vendor **fashion marketplace** frontend (all types of clothing and accessories) built with Next.js,
+TypeScript, and Tailwind CSS. The current collection is **kaftans** (30 products sold by Rebel Fashion itself).
+Shoppers buy from Rebel Fashion and from approved independent sellers; sellers sign up and list any clothing or
+accessory; an admin approves listings and manages orders. The platform keeps a commission
+(`PLATFORM_COMMISSION_PERCENT`, 10%) on every marketplace sale.
+
+> **Frontend only.** Until a backend is connected, data lives in a mock store in the browser
+> (no demo sellers or fake listings; sellers sign up through the form). The backend will be Supabase:
+> start with **[BACKEND.md](./BACKEND.md)**, section 8.
+
+## Marketplace quick tour
+
+| Area | Routes |
+|------|--------|
+| Storefront | `/` (intro splash once per session), `/shop` (filters: gender, search, price), `/product/[slug]` (choose Type, Colour, Size), `/cart`, `/checkout`, `/checkout/success`, `/wishlist`, `/account` |
+| Sellers | `/sell` (pitch), `/seller/signup`, `/seller/login`, `/seller/dashboard`, `/seller/listings/new` |
+| Admin | `/admin/login`, `/admin` (overview, pending listings, all products, sellers, orders) |
+| Mock API | `POST /api/checkout` (demo payment, needs `MOCK_PAYMENTS=true`) |
+
+Admin login in mock mode: `ADMIN_DEMO_CREDENTIALS` in `src/lib/config.ts` (never shown in the UI).
+Sellers create real accounts at `/seller/signup`.
+
+Key files:
+- `src/lib/config.ts` — `SITE_NAME`, `PLATFORM_COMMISSION_PERCENT`, shipping rates, env switches.
+- `src/lib/types.ts` — all domain types.
+- `src/lib/api/` — the only data layer (`index.ts` picks `mock.ts`, `http.ts` or a future `supabase.ts` from `NEXT_PUBLIC_API_MODE`).
+- `src/lib/seed-data.ts` — the platform's 30 kaftans. Photos are in `public/products/` (generated product shots, no faces).
+- `npm run test:images` — tests for the photo upload/compression pipeline.
+
+Reset the mock store by clearing the site's localStorage (key `rf-mock-db`) or bumping `SEED_VERSION`.
 
 ## About the Project
 
@@ -63,12 +92,13 @@ src/
 │   ├── layout.tsx
 │   └── page.tsx
 ├── components/
-│   ├── header.tsx
-│   ├── footer.tsx
-│   ├── ProductCard.tsx
-│   └── store-provider.tsx
+│   ├── header.tsx, footer.tsx, splash-intro.tsx, marquee.tsx
+│   ├── product-card.tsx, product-detail-view.tsx
+│   └── store-provider.tsx   (cart + wishlist)
+├── hooks/                   (useAsync, seller/admin session guards)
 └── lib/
-    └── store-data.ts
+    ├── config.ts, types.ts, commission.ts, seed-data.ts
+    └── api/                 (contract.ts, index.ts, mock.ts, http.ts)
 ```
 
 The exact file names and routes may change as development continues.
@@ -86,13 +116,13 @@ The exact file names and routes may change as development continues.
 Clone the repository:
 
 ```bash
-git clone https://github.com/Hassans09/payment-testing.git
+git clone https://github.com/sajjadh09/rebel-fashion-2.git
 ```
 
 Move into the project directory:
 
 ```bash
-cd payment-testing
+cd rebel-fashion-2
 ```
 
 Install dependencies:
@@ -115,7 +145,10 @@ http://localhost:3000
 
 ## Backend Integration
 
-The frontend checkout currently uses the following integration point:
+See **[BACKEND.md](./BACKEND.md)** for the full API contract (every endpoint, auth, uploads and Paystack split payments).
+Switch data source with `NEXT_PUBLIC_API_MODE=mock|http|supabase` (see `.env.example`; legacy `NEXT_PUBLIC_USE_MOCK_API=false` = `http`).
+
+The legacy mock checkout integration point is still available:
 
 ```text
 POST /api/checkout

@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { products } from "@/lib/store-data";
+import { PLATFORM_SELLER_ID, SHIPPING_RATES } from "@/lib/config";
+import { splitLine } from "@/lib/commission";
+import { findSeedProduct } from "@/lib/seed-data";
+
+/**
+ * MOCK payment route (only active when MOCK_PAYMENTS=true).
+ *
+ * Validates the bag, re-checks prices, works out the seller/platform split and
+ * returns a fake "payment page" URL (the success page). In production this is
+ * replaced by the backend's POST /orders, which initialises a Paystack
+ * transaction with split payments and returns Paystack's authorization_url.
+ * See BACKEND.md.
+ */
 
 function generateOrderReference(): string {
   const now = new Date();
@@ -46,6 +58,9 @@ export async function POST(request: NextRequest) {
         id?: string;
         productId?: string;
         quantity?: number;
+        unitPrice?: number;
+        price?: number;
+        sellerId?: string;
       }>;
       shippingMethod?: string;
       paymentMethod?: string;
@@ -82,20 +97,46 @@ export async function POST(request: NextRequest) {
   }
 
   let serverSubtotal = 0;
+  let commissionTotal = 0;
+  const sellerTotals: Record<string, { grossAmount: number; commissionAmount: number; sellerAmount: number }> = {};
+
   for (const item of items) {
-    const productId = item.productId || item.id;
-    const product = products.find((p) => p.id === productId);
-    if (!product) {
-      return NextResponse.json(
-        { error: "One or more items in your bag are invalid." },
-        { status: 400 }
-      );
+    const productId = item.productId || item.id || "";
+    const quantity = typeof item.quantity === "number" && item.quantity > 0 ? Math.min(Math.round(item.quantity), 99) : 1;
+    const seedProduct = findSeedProduct(productId);
+
+    let unitPrice: number;
+    let sellerId: string;
+
+    if (seedProduct) {
+      // Platform catalogue: the server knows the real price.
+      unitPrice = seedProduct.price;
+      sellerId = seedProduct.sellerId;
+    } else {
+      // Listings created by sellers in mock mode only exist in the shopper's browser,
+      // so the mock has to trust the submitted price. The real backend must ALWAYS
+      // look the price up in its own database.
+      const submitted = typeof item.unitPrice === "number" ? item.unitPrice : item.price;
+      if (typeof submitted !== "number" || !Number.isFinite(submitted) || submitted <= 0 || !item.sellerId || item.sellerId === PLATFORM_SELLER_ID) {
+        return NextResponse.json(
+          { error: "One or more items in your bag are invalid." },
+          { status: 400 }
+        );
+      }
+      unitPrice = Math.round(submitted);
+      sellerId = item.sellerId;
     }
-    const quantity = typeof item.quantity === "number" && item.quantity > 0 ? item.quantity : 1;
-    serverSubtotal += product.price * quantity;
+
+    const split = splitLine(unitPrice, quantity, sellerId);
+    serverSubtotal += split.lineTotal;
+    commissionTotal += split.commissionAmount;
+    const totals = (sellerTotals[sellerId] ??= { grossAmount: 0, commissionAmount: 0, sellerAmount: 0 });
+    totals.grossAmount += split.lineTotal;
+    totals.commissionAmount += split.commissionAmount;
+    totals.sellerAmount += split.sellerAmount;
   }
 
-  const shippingCost = shippingMethod === "priority" ? 6500 : 3500;
+  const shippingCost = shippingMethod === "priority" ? SHIPPING_RATES.priority : SHIPPING_RATES.standard;
   const serverTotal = serverSubtotal + shippingCost;
 
   if (serverTotal !== displayedTotal) {
@@ -109,5 +150,16 @@ export async function POST(request: NextRequest) {
   const origin = request.nextUrl.origin;
   const checkoutUrl = `${origin}/checkout/success?ref=${orderRef}`;
 
-  return NextResponse.json({ checkoutUrl }, { status: 200 });
+  return NextResponse.json(
+    {
+      checkoutUrl,
+      reference: orderRef,
+      subtotal: serverSubtotal,
+      shippingCost,
+      total: serverTotal,
+      commissionTotal,
+      sellerSplits: Object.entries(sellerTotals).map(([sellerId, totals]) => ({ sellerId, ...totals })),
+    },
+    { status: 200 }
+  );
 }

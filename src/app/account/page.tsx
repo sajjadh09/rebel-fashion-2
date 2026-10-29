@@ -38,6 +38,13 @@ export default function AccountPage() {
           <ArrowLeft className="h-4 w-4" />
           Continue Shopping
         </Link>
+
+        <p className="mt-8 text-xs text-[color:var(--brand-charcoal)]/65">
+          Selling clothes?{" "}
+          <Link href="/seller/login" className="font-semibold text-[color:var(--brand-deep)] underline">Seller login</Link>
+          {" · "}
+          <Link href="/sell" className="font-semibold text-[color:var(--brand-deep)] underline">Open a store</Link>
+        </p>
       </section>
     </main>
   );

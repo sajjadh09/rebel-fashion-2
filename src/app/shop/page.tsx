@@ -5,8 +5,26 @@ import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Filter, RotateCcw, Search, SlidersHorizontal, Sparkles } from "lucide-react";
 
-import { ProductCard } from "@/components/product-card";
-import { categories, formatPrice, products } from "@/lib/store-data";
+import { ProductCard, ProductGridSkeleton } from "@/components/product-card";
+import { useAsync } from "@/hooks/use-async";
+import { getProducts } from "@/lib/api";
+import { formatPrice } from "@/lib/format";
+import { seedProducts } from "@/lib/seed-data";
+import type { Gender } from "@/lib/types";
+
+const MAX_PRICE = 100000;
+const MIN_PRICE = 10000;
+const initialProducts = seedProducts.filter((product) => product.status === "approved");
+const genderTabs: { value: Gender | "all"; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "men", label: "Men" },
+  { value: "women", label: "Women" },
+  { value: "kids", label: "Kids" },
+];
+
+function parseGender(value: string | null): Gender | "all" {
+  return value === "men" || value === "women" || value === "kids" ? value : "all";
+}
 
 export default function ShopPage() {
   return (
@@ -19,30 +37,33 @@ export default function ShopPage() {
 function ShopParamsWrapper() {
   const params = useSearchParams();
   const search = params.get("search") ?? "";
-  const category = params.get("category") ?? "all";
-  return <ShopContent key={`${search}:${category}`} initialSearch={search} initialCategory={category} />;
+  const gender = parseGender(params.get("gender"));
+  return <ShopContent key={`${search}:${gender}`} initialSearch={search} initialGender={gender} />;
 }
 
-function ShopContent({ initialSearch, initialCategory }: { initialSearch: string; initialCategory: string }) {
+function ShopContent({ initialSearch, initialGender }: { initialSearch: string; initialGender: Gender | "all" }) {
   const [searchTerm, setSearchTerm] = useState(initialSearch);
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  const [selectedGender, setSelectedGender] = useState<Gender | "all">(initialGender);
   const [sortBy, setSortBy] = useState("featured");
-  const [maxPrice, setMaxPrice] = useState(120000);
+  const [maxPrice, setMaxPrice] = useState(MAX_PRICE);
+
+  const { data, loading } = useAsync(() => getProducts(), [], initialProducts);
+  const products = useMemo(() => data ?? [], [data]);
 
   const filteredProducts = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
 
     const nextProducts = products.filter((product) => {
-      const matchesCategory = selectedCategory === "all" || product.category === selectedCategory;
+      const matchesGender = selectedGender === "all" || product.gender === selectedGender || product.gender === "unisex";
       const matchesPrice = product.price <= maxPrice;
       const matchesSearch =
         term.length === 0 ||
-        product.name.toLowerCase().includes(term) ||
-        product.description.toLowerCase().includes(term) ||
-        product.category.toLowerCase().includes(term) ||
-        product.material.toLowerCase().includes(term);
+        [product.name, product.description, product.productType, product.material, product.sellerName, ...product.colors.map((color) => color.name)]
+          .join(" ")
+          .toLowerCase()
+          .includes(term);
 
-      return matchesCategory && matchesPrice && matchesSearch;
+      return matchesGender && matchesPrice && matchesSearch;
     });
 
     switch (sortBy) {
@@ -51,20 +72,20 @@ function ShopContent({ initialSearch, initialCategory }: { initialSearch: string
       case "high-to-low":
         return [...nextProducts].sort((a, b) => b.price - a.price);
       case "newest":
-        return [...nextProducts].sort((a, b) => (a.badge ? -1 : 1) - (b.badge ? -1 : 1));
+        return [...nextProducts].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       default:
         return [...nextProducts].sort((a, b) => Number(b.featured) - Number(a.featured));
     }
-  }, [maxPrice, searchTerm, selectedCategory, sortBy]);
+  }, [products, maxPrice, searchTerm, selectedGender, sortBy]);
 
-  const activeCategoryObj = categories.find((c) => c.slug === selectedCategory);
-  const categoryTitle = selectedCategory === "all" ? "All Pieces" : activeCategoryObj?.name ?? "Collection";
+  const genderLabel = genderTabs.find((tab) => tab.value === selectedGender)?.label;
+  const pageTitle = selectedGender === "all" ? "Shop all" : `Shop ${genderLabel}`;
 
   const handleReset = () => {
-    setSelectedCategory("all");
+    setSelectedGender("all");
     setSearchTerm("");
     setSortBy("featured");
-    setMaxPrice(120000);
+    setMaxPrice(MAX_PRICE);
   };
 
   return (
@@ -73,57 +94,37 @@ function ShopContent({ initialSearch, initialCategory }: { initialSearch: string
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>Curated Fashion & Gifts</span>
+            <span>Now in: Kaftans</span>
           </div>
-          <h1 className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight text-[color:var(--brand-deep)]">
-            {categoryTitle}
+          <h1 className="font-display mt-2 text-4xl text-[color:var(--brand-deep)] sm:text-5xl">
+            {pageTitle}
           </h1>
-          {activeCategoryObj && (
-            <p className="mt-1.5 max-w-2xl text-xs sm:text-sm text-[color:var(--brand-charcoal)]/75">
-              {activeCategoryObj.description}
-            </p>
-          )}
+          <p className="mt-1.5 max-w-2xl text-xs sm:text-sm text-[color:var(--brand-charcoal)]/75">
+            Clothing for everyone, from us and approved independent sellers. Our current collection: modern kaftans.
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs font-medium uppercase tracking-wider text-[color:var(--brand-charcoal)]/60">
-            Showing <strong className="text-[color:var(--brand-deep)] font-bold">{filteredProducts.length}</strong> styles
+            Showing <strong className="text-[color:var(--brand-deep)] font-bold">{filteredProducts.length}</strong> products
           </span>
         </div>
       </div>
 
-      <div className="mb-8">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+      <div className="mb-6 flex gap-1 rounded-full border border-[color:var(--brand-border)] bg-white p-1 w-fit">
+        {genderTabs.map((tab) => (
           <button
+            key={tab.value}
             type="button"
-            onClick={() => setSelectedCategory("all")}
-            className={`shrink-0 rounded-full px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition ${
-              selectedCategory === "all"
-                ? "bg-[color:var(--brand-deep)] text-white shadow-sm"
-                : "border border-[color:var(--brand-border)] bg-white text-[color:var(--brand-charcoal)]/80 hover:bg-[color:var(--brand-soft)]/50"
+            onClick={() => setSelectedGender(tab.value)}
+            className={`rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider transition sm:px-5 ${
+              selectedGender === tab.value
+                ? "bg-[color:var(--brand-deep)] text-white"
+                : "text-[color:var(--brand-charcoal)]/75 hover:bg-[color:var(--brand-soft)]/50"
             }`}
           >
-            All Pieces ({products.length})
+            {tab.label}
           </button>
-
-          {categories.map((cat) => {
-            const count = products.filter((p) => p.category === cat.slug).length;
-            const isSelected = selectedCategory === cat.slug;
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setSelectedCategory(cat.slug)}
-                className={`shrink-0 rounded-full px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition ${
-                  isSelected
-                    ? "bg-[color:var(--brand-deep)] text-white shadow-sm"
-                    : "border border-[color:var(--brand-border)] bg-white text-[color:var(--brand-charcoal)]/80 hover:bg-[color:var(--brand-soft)]/50"
-                }`}
-              >
-                {cat.name} {count > 0 ? `(${count})` : ""}
-              </button>
-            );
-          })}
-        </div>
+        ))}
       </div>
 
       {/* Filter and Control Bar */}
@@ -132,14 +133,14 @@ function ShopContent({ initialSearch, initialCategory }: { initialSearch: string
           {/* Search Box */}
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-deep)]">
-              Search Styles & Fabrics
+              Search
             </label>
             <div className="flex items-center gap-2 rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-3.5 py-2.5 focus-within:border-[color:var(--brand-primary)]">
               <Search className="h-4 w-4 text-[color:var(--brand-chocolate)]/60" />
               <input
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search heavyweight, blazer, denim, linen..."
+                placeholder="Search kaftan, linen, black, seller..."
                 className="w-full bg-transparent text-xs text-[color:var(--brand-charcoal)] placeholder:text-[color:var(--brand-charcoal)]/45 focus:outline-none"
               />
             </div>
@@ -178,8 +179,8 @@ function ShopContent({ initialSearch, initialCategory }: { initialSearch: string
             <div className="rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-4 py-2 flex items-center">
               <input
                 type="range"
-                min="20000"
-                max="120000"
+                min={MIN_PRICE}
+                max={MAX_PRICE}
                 step="5000"
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(Number(e.target.value))}
@@ -190,15 +191,15 @@ function ShopContent({ initialSearch, initialCategory }: { initialSearch: string
         </div>
 
         {/* Active Filters row */}
-        {(selectedCategory !== "all" || searchTerm || maxPrice < 120000 || sortBy !== "featured") && (
+        {(selectedGender !== "all" || searchTerm || maxPrice < MAX_PRICE || sortBy !== "featured") && (
           <div className="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-[color:var(--brand-border)]/60">
             <span className="text-xs font-medium text-[color:var(--brand-charcoal)]/60 flex items-center gap-1">
               <Filter className="h-3 w-3" />
               Active Filters:
             </span>
-            {selectedCategory !== "all" && (
+            {selectedGender !== "all" && (
               <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--brand-soft)]/60 px-3 py-1 text-xs font-medium text-[color:var(--brand-deep)]">
-                {categoryTitle}
+                {genderLabel}
               </span>
             )}
             {searchTerm && (
@@ -206,7 +207,7 @@ function ShopContent({ initialSearch, initialCategory }: { initialSearch: string
                 &ldquo;{searchTerm}&rdquo;
               </span>
             )}
-            {maxPrice < 120000 && (
+            {maxPrice < MAX_PRICE && (
               <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--brand-soft)]/60 px-3 py-1 text-xs font-medium text-[color:var(--brand-deep)]">
                 Up to {formatPrice(maxPrice)}
               </span>
@@ -224,7 +225,9 @@ function ShopContent({ initialSearch, initialCategory }: { initialSearch: string
       </div>
 
       {/* Products Grid */}
-      {filteredProducts.length > 0 ? (
+      {loading && products.length === 0 ? (
+        <ProductGridSkeleton count={8} />
+      ) : filteredProducts.length > 0 ? (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
@@ -232,9 +235,9 @@ function ShopContent({ initialSearch, initialCategory }: { initialSearch: string
         </div>
       ) : (
         <div className="rounded-[32px] border border-dashed border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-12 text-center">
-          <h2 className="text-2xl font-bold text-[color:var(--brand-deep)]">No styles match your filters</h2>
+          <h2 className="text-2xl font-bold text-[color:var(--brand-deep)]">No products match your filters</h2>
           <p className="mt-2 text-sm text-[color:var(--brand-charcoal)]/70 max-w-md mx-auto">
-            Try adjusting your price ceiling, clearing your search query, or selecting another category to view our collection.
+            Try adjusting your price ceiling, clearing your search query, or choosing another gender to see more.
           </p>
           <button
             type="button"
@@ -251,20 +254,20 @@ function ShopContent({ initialSearch, initialCategory }: { initialSearch: string
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="max-w-xl">
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-deep)]/75">
-              Editorial Styling
+              For tailors &amp; boutiques
             </span>
-            <h3 className="mt-2 text-2xl sm:text-3xl font-extrabold tracking-tight text-[color:var(--brand-deep)]">
-              Build a polished capsule wardrobe.
+            <h3 className="font-display mt-2 text-3xl text-[color:var(--brand-deep)] sm:text-4xl">
+              Make or sell clothes? Sell them here.
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-[color:var(--brand-charcoal)]/75">
-              Pair structured layers, statement accessories, and soft neutrals for gifting and daily wear.
+              Open a seller account, upload your pieces and get paid straight to your bank account after every sale.
             </p>
           </div>
           <Link
-            href="/shop?category=co-ords"
+            href="/sell"
             className="inline-flex shrink-0 items-center justify-center rounded-full bg-[color:var(--brand-primary)] px-7 py-3.5 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] shadow-sm hover:bg-[color:var(--brand-secondary)] transition"
           >
-            Explore Matching Sets
+            Start selling
           </Link>
         </div>
       </div>
