@@ -462,6 +462,20 @@ so both can use the same `initialize` flow (optionally pass `channels: ["card"]`
 
 ---
 
+## 4.1 Payments with FairSurePay
+
+The checkout offers **FairSurePay** as a payment method option (`paymentMethod = "fairsurepay"`).
+
+### ⚠️ Merchant Documentation & Credentials Status
+
+- **Status**: Verification of `https://fairsurepay.com` confirmed the merchant portal (`merchant.fairsurepay.com`). However, public REST API specifications, webhook signature specs, and test merchant credentials are not publicly available on open documentation pages.
+- **Backend Requirement**: Once merchant API keys (`FAIRSUREPAY_API_KEY`, `FAIRSUREPAY_SECRET_KEY`) and documentation are supplied by the merchant:
+  1. Initialize the FairSurePay order/checkout session when `paymentMethod === "fairsurepay"`.
+  2. Return the authorization or payment URL in `checkoutUrl`.
+  3. Register the webhook handler (e.g. `POST /payments/fairsurepay/webhook`) to handle payment confirmation events idempotently.
+
+---
+
 ## 5. What the mock route `/api/checkout` is
 
 `src/app/api/checkout/route.ts` is a **mock payment route** (enabled with `MOCK_PAYMENTS=true`). It validates

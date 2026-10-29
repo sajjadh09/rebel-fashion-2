@@ -10,7 +10,7 @@ import { SmartImage } from "@/components/smart-image";
 import { Card, ErrorNote, Field, inputClass, primaryButtonClass, secondaryButtonClass } from "@/components/ui/form";
 import { useSellerSession } from "@/hooks/use-session";
 import { createListing, uploadListingImage } from "@/lib/api";
-import { PLATFORM_COMMISSION_PERCENT } from "@/lib/config";
+import { CONTROLLED_CATEGORIES, PLATFORM_COMMISSION_PERCENT } from "@/lib/config";
 import { formatPrice } from "@/lib/format";
 import { moveItem } from "@/lib/image-utils";
 import type { ColorVariant, Gender } from "@/lib/types";
@@ -36,6 +36,7 @@ export default function NewListingPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<string>("Kaftans & Traditional");
   const [productType, setProductType] = useState("");
   const [gender, setGender] = useState<GenderChoice>("");
   const [material, setMaterial] = useState("");
@@ -130,6 +131,7 @@ export default function NewListingPage() {
       await createListing({
         name,
         description,
+        category,
         productType,
         ...(gender ? { gender } : {}),
         typeOption: optionValues.length > 1 ? { label: optionLabel.trim() || "Type", values: optionValues } : null,
@@ -269,7 +271,16 @@ export default function NewListingPage() {
             <Field label="Title" htmlFor="title" className="sm:col-span-2">
               <input id="title" className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Oversized Linen Shirt" maxLength={90} />
             </Field>
-            <Field label="Product type" htmlFor="product-type" hint="Type anything that describes it.">
+            <Field label="Category *" htmlFor="category">
+              <select id="category" className={inputClass} value={category} onChange={(e) => setCategory(e.target.value)}>
+                {CONTROLLED_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Product type" htmlFor="product-type" hint="Type anything that describes it specifically.">
               <input
                 id="product-type"
                 list="product-type-suggestions"

@@ -37,8 +37,10 @@ export type Product = {
   slug: string;
   name: string;
   description: string;
-  /** Free-text product type entered by the seller, e.g. "Kaftan", "Shirt", "Dress", "Bag". Display only, not a category. */
+  /** Free-text product type entered by the seller, e.g. "Kaftan", "Shirt", "Dress", "Bag". */
   productType: string;
+  /** Controlled category option, e.g. "Kaftans & Traditional", "Shirts & Tops". */
+  category?: string;
   /** "unisex" also means "not specified". */
   gender: Gender;
   /** Optional Type choice (e.g. Short/Long). Shoppers must pick one when present. */
@@ -108,6 +110,8 @@ export type NewListingInput = {
   description: string;
   /** Free text, e.g. "Shirt", "Dress", "Kaftan", "Shoes", "Bag". */
   productType: string;
+  /** Controlled category from CONTROLLED_CATEGORIES. */
+  category?: string;
   /** Optional. Omitted or "unisex" = not specified. */
   gender?: Gender;
   /** Optional Type choice shoppers pick from, e.g. { label: "Length", values: ["Short", "Long"] }. */
@@ -122,6 +126,7 @@ export type NewListingInput = {
 
 export type ProductFilters = {
   gender?: Gender | "all";
+  category?: string;
   search?: string;
   sellerId?: string;
   ids?: string[];
@@ -130,7 +135,7 @@ export type ProductFilters = {
 export type OrderStatus = "pending" | "paid" | "shipped" | "delivered" | "cancelled";
 
 export type ShippingMethod = "standard" | "priority";
-export type PaymentMethod = "card" | "transfer";
+export type PaymentMethod = "card" | "transfer" | "fairsurepay";
 
 export type Customer = {
   fullName: string;

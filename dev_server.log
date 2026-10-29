@@ -1,0 +1,79 @@
+
+> rebel-fashion@0.1.0 dev
+> next dev -p 3000 -H 0.0.0.0
+
+▲ Next.js 16.4.0 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+✓ Ready in 592ms
+✓ Running next.config.ts took 56ms
+
+○ Compiling /shop ...
+ GET /shop 200 in 1527ms (next.js: 578ms, application-code: 949ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <InnerLayoutRouter url="/shop" tree={[...]} params={{}} renderTree={{...}} segmentPath={[...]} ...>
+      <SegmentViewNode type="page" pagePath="src/shop/p...">
+        <SegmentTrieNode>
+        <ClientPageRoot Component={function ShopPage} serverProvidedParams={{...}}>
+          <ShopPage params={Promise} searchParams={Promise}>
+            <Suspense fallback={<div>}>
+              <ShopParamsWrapper>
+                <ShopContent initialSearch="" initialGender="all" initialCategory="">
+                  <div className="mx-auto ma...">
+                    <div>
+                    <div>
+                    <div className="mb-8 round...">
+                      <div className="grid gap-4...">
+                        <div>
+                          <label>
+                          <div className="flex items...">
+                            <Search>
+                            <input
+                              value=""
+                              onChange={function onChange}
+                              placeholder="Search kaftan, linen, black, seller..."
+                              className="w-full bg-transparent text-xs text-[color:var(--brand-charcoal)] placeholder:..."
+-                             style={{caret-color:"transparent"}}
+                            >
+                        <div>
+                        <div>
+                          <div>
+                          <div className="rounded-2x...">
+                            <input
+                              type="range"
+                              min={10000}
+                              max={100000}
+                              step="5000"
+                              value={100000}
+                              onChange={function onChange}
+                              className="w-full accent-[color:var(--brand-primary)] cursor-pointer"
+-                             style={{caret-color:"transparent"}}
+                            >
+                    ...
+      ...
+
+[browser] Image with src "/products/charcoal-linen-kaftan.webp" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+ GET /shop 200 in 264ms (next.js: 2ms, application-code: 262ms)
+[browser] Image with src "/products/classic-white-cotton-kaftan.webp" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+ GET /checkout 200 in 146ms (next.js: 13ms, application-code: 133ms)
+ GET / 200 in 182ms (next.js: 14ms, application-code: 168ms)
+ GET /shop 200 in 217ms (next.js: 1.9ms, application-code: 215ms)
+[browser] Image with src "/products/classic-white-cotton-kaftan.webp" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+ GET /checkout 200 in 152ms (next.js: 3ms, application-code: 149ms)
+ GET / 200 in 123ms (next.js: 1.6ms, application-code: 122ms)
+ GET /checkout 200 in 70ms (next.js: 1.3ms, application-code: 69ms)

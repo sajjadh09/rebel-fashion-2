@@ -8,6 +8,7 @@ import { Filter, RotateCcw, Search, SlidersHorizontal, Sparkles } from "lucide-r
 import { ProductCard, ProductGridSkeleton } from "@/components/product-card";
 import { useAsync } from "@/hooks/use-async";
 import { getProducts } from "@/lib/api";
+import { resolveProductCategory } from "@/lib/config";
 import { formatPrice } from "@/lib/format";
 import { seedProducts } from "@/lib/seed-data";
 import type { Gender } from "@/lib/types";
@@ -38,17 +39,30 @@ function ShopParamsWrapper() {
   const params = useSearchParams();
   const search = params.get("search") ?? "";
   const gender = parseGender(params.get("gender"));
-  return <ShopContent key={`${search}:${gender}`} initialSearch={search} initialGender={gender} />;
+  const category = params.get("category") ?? "";
+  return <ShopContent key={`${search}:${gender}:${category}`} initialSearch={search} initialGender={gender} initialCategory={category} />;
 }
 
-function ShopContent({ initialSearch, initialGender }: { initialSearch: string; initialGender: Gender | "all" }) {
+function ShopContent({ initialSearch, initialGender, initialCategory }: { initialSearch: string; initialGender: Gender | "all"; initialCategory: string }) {
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [selectedGender, setSelectedGender] = useState<Gender | "all">(initialGender);
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [sortBy, setSortBy] = useState("featured");
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE);
 
   const { data, loading } = useAsync(() => getProducts(), [], initialProducts);
   const products = useMemo(() => data ?? [], [data]);
+
+  /** Dynamically compute categories that have active, approved and in-stock products. */
+  const activeCategories = useMemo(() => {
+    const categorySet = new Set<string>();
+    products.forEach((product) => {
+      if (product.status === "approved" && product.stock > 0) {
+        categorySet.add(resolveProductCategory(product));
+      }
+    });
+    return Array.from(categorySet).sort();
+  }, [products]);
 
   const filteredProducts = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -56,14 +70,16 @@ function ShopContent({ initialSearch, initialGender }: { initialSearch: string; 
     const nextProducts = products.filter((product) => {
       const matchesGender = selectedGender === "all" || product.gender === selectedGender || product.gender === "unisex";
       const matchesPrice = product.price <= maxPrice;
+      const productCat = resolveProductCategory(product);
+      const matchesCategory = !selectedCategory || productCat === selectedCategory;
       const matchesSearch =
         term.length === 0 ||
-        [product.name, product.description, product.productType, product.material, product.sellerName, ...product.colors.map((color) => color.name)]
+        [product.name, product.description, product.productType, productCat, product.material, product.sellerName, ...product.colors.map((color) => color.name)]
           .join(" ")
           .toLowerCase()
           .includes(term);
 
-      return matchesGender && matchesPrice && matchesSearch;
+      return matchesGender && matchesCategory && matchesPrice && matchesSearch;
     });
 
     switch (sortBy) {
@@ -76,13 +92,14 @@ function ShopContent({ initialSearch, initialGender }: { initialSearch: string; 
       default:
         return [...nextProducts].sort((a, b) => Number(b.featured) - Number(a.featured));
     }
-  }, [products, maxPrice, searchTerm, selectedGender, sortBy]);
+  }, [products, maxPrice, searchTerm, selectedGender, selectedCategory, sortBy]);
 
   const genderLabel = genderTabs.find((tab) => tab.value === selectedGender)?.label;
   const pageTitle = selectedGender === "all" ? "Shop all" : `Shop ${genderLabel}`;
 
   const handleReset = () => {
     setSelectedGender("all");
+    setSelectedCategory("");
     setSearchTerm("");
     setSortBy("featured");
     setMaxPrice(MAX_PRICE);
@@ -110,21 +127,54 @@ function ShopContent({ initialSearch, initialGender }: { initialSearch: string; 
         </div>
       </div>
 
-      <div className="mb-6 flex gap-1 rounded-full border border-[color:var(--brand-border)] bg-white p-1 w-fit">
-        {genderTabs.map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            onClick={() => setSelectedGender(tab.value)}
-            className={`rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider transition sm:px-5 ${
-              selectedGender === tab.value
-                ? "bg-[color:var(--brand-deep)] text-white"
-                : "text-[color:var(--brand-charcoal)]/75 hover:bg-[color:var(--brand-soft)]/50"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <div className="flex gap-1 rounded-full border border-[color:var(--brand-border)] bg-white p-1">
+          {genderTabs.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => setSelectedGender(tab.value)}
+              className={`rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider transition sm:px-5 ${
+                selectedGender === tab.value
+                  ? "bg-[color:var(--brand-deep)] text-white"
+                  : "text-[color:var(--brand-charcoal)]/75 hover:bg-[color:var(--brand-soft)]/50"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Dynamic Category Chips (only shown for categories with active in-stock products) */}
+        {activeCategories.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 overflow-x-auto py-1">
+            <button
+              type="button"
+              onClick={() => setSelectedCategory("")}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                !selectedCategory
+                  ? "border-[color:var(--brand-deep)] bg-[color:var(--brand-deep)] text-white"
+                  : "border-[color:var(--brand-border)] bg-white text-[color:var(--brand-charcoal)] hover:bg-[color:var(--brand-soft)]/50"
+              }`}
+            >
+              All Categories
+            </button>
+            {activeCategories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat === selectedCategory ? "" : cat)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                  selectedCategory === cat
+                    ? "border-[color:var(--brand-deep)] bg-[color:var(--brand-deep)] text-white"
+                    : "border-[color:var(--brand-border)] bg-white text-[color:var(--brand-charcoal)] hover:bg-[color:var(--brand-soft)]/50"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Filter and Control Bar */}
@@ -191,7 +241,7 @@ function ShopContent({ initialSearch, initialGender }: { initialSearch: string; 
         </div>
 
         {/* Active Filters row */}
-        {(selectedGender !== "all" || searchTerm || maxPrice < MAX_PRICE || sortBy !== "featured") && (
+        {(selectedGender !== "all" || selectedCategory || searchTerm || maxPrice < MAX_PRICE || sortBy !== "featured") && (
           <div className="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-[color:var(--brand-border)]/60">
             <span className="text-xs font-medium text-[color:var(--brand-charcoal)]/60 flex items-center gap-1">
               <Filter className="h-3 w-3" />
@@ -200,6 +250,11 @@ function ShopContent({ initialSearch, initialGender }: { initialSearch: string; 
             {selectedGender !== "all" && (
               <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--brand-soft)]/60 px-3 py-1 text-xs font-medium text-[color:var(--brand-deep)]">
                 {genderLabel}
+              </span>
+            )}
+            {selectedCategory && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--brand-soft)]/60 px-3 py-1 text-xs font-medium text-[color:var(--brand-deep)]">
+                {selectedCategory}
               </span>
             )}
             {searchTerm && (

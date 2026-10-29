@@ -16,6 +16,7 @@ import {
   Truck,
   AlertCircle,
   LoaderCircle,
+  Shield,
 } from "lucide-react";
 
 import { useStore } from "@/components/store-provider";
@@ -33,7 +34,7 @@ const NIGERIAN_STATES = [
   "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
 ];
 
-type PaymentMethod = "card" | "transfer";
+type PaymentMethod = "card" | "transfer" | "fairsurepay";
 type ShippingMethod = "standard" | "priority";
 type Coordinates = { latitude: number; longitude: number };
 
@@ -800,6 +801,13 @@ export default function CheckoutPage() {
                     description:
                       "Continue to the payment provider for supported transfer instructions.",
                     Icon: Landmark,
+                  },
+                  {
+                    id: "fairsurepay" as const,
+                    title: "FairSurePay",
+                    description:
+                      "Pay via FairSurePay payment gateway for buyer and seller protection.",
+                    Icon: Shield,
                   },
                 ]).map(({ id, title, description, Icon }) => (
                   <button
