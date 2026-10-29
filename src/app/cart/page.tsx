@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 
 import { useStore } from "@/components/store-provider";
-import { formatPrice } from "@/lib/store-data";
+import { formatPrice } from "@/lib/format";
 
 export default function CartPage() {
   const { cart, updateCartQuantity, removeFromCart, subtotal, clearCart } = useStore();

@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
         hostname: "images.unsplash.com",
         pathname: "/**",
       },
+      {
+        // Demo kaftan photos (free Pexels stock images, see src/lib/seed-data.ts)
+        protocol: "https",
+        hostname: "images.pexels.com",
+        pathname: "/photos/**",
+      },
     ],
   },
 };

@@ -19,7 +19,10 @@ import {
 } from "lucide-react";
 
 import { useStore } from "@/components/store-provider";
-import { formatPrice } from "@/lib/store-data";
+import { createOrder } from "@/lib/api";
+import { writeJSON } from "@/lib/client-storage";
+import { SHIPPING_RATES } from "@/lib/config";
+import { formatPrice } from "@/lib/format";
 
 const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa",
@@ -78,7 +81,7 @@ export default function CheckoutPage() {
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
 
   const shippingCost =
-    subtotal === 0 ? 0 : form.shippingMethod === "priority" ? 6500 : 3500;
+    subtotal === 0 ? 0 : SHIPPING_RATES[form.shippingMethod];
 
   const finalTotal = Math.max(0, subtotal + shippingCost);
 
@@ -316,64 +319,56 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer: {
-            fullName: form.fullName.trim(),
-            email: form.email.trim(),
-            phone: form.phone.trim(),
-            address: form.address.trim(),
-            city: form.city.trim(),
-            state: form.state,
-          },
-          deliveryLocation: coordinates,
-          items: cart,
-          shippingMethod: form.shippingMethod,
-          paymentMethod: form.paymentMethod,
-          displayedSubtotal: subtotal,
-          displayedShipping: shippingCost,
-          displayedTotal: finalTotal,
-        }),
+      // All order creation goes through the API layer: in demo mode it calls the
+      // mock payment route (/api/checkout); with a real backend it calls POST /orders.
+      const { order, checkoutUrl } = await createOrder({
+        customer: {
+          fullName: form.fullName.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          address: form.address.trim(),
+          city: form.city.trim(),
+          state: form.state,
+        },
+        deliveryLocation: coordinates,
+        items: cart.map((item) => ({
+          productId: item.productId,
+          slug: item.slug,
+          name: item.name,
+          image: item.image,
+          color: item.color,
+          size: item.size,
+          quantity: item.quantity,
+          unitPrice: item.price,
+          sellerId: item.sellerId,
+          sellerName: item.sellerName,
+        })),
+        shippingMethod: form.shippingMethod,
+        paymentMethod: form.paymentMethod,
+        displayedSubtotal: subtotal,
+        displayedShipping: shippingCost,
+        displayedTotal: finalTotal,
       });
 
-      const data: {
-        error?: string;
-        checkoutUrl?: string;
-      } = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(
-          data.error ||
-            "We couldn't process your request. Please try again."
-        );
-      }
-
       let isValidUrl = false;
-      if (data.checkoutUrl) {
-        if (/^https:\/\//i.test(data.checkoutUrl)) {
-          isValidUrl = true;
-        } else {
-          try {
-            const url = new URL(data.checkoutUrl, window.location.origin);
-            if (url.origin === window.location.origin) {
-              isValidUrl = true;
-            }
-          } catch {
-            isValidUrl = false;
-          }
+      if (/^https:\/\//i.test(checkoutUrl)) {
+        isValidUrl = true;
+      } else {
+        try {
+          const url = new URL(checkoutUrl, window.location.origin);
+          isValidUrl = url.origin === window.location.origin;
+        } catch {
+          isValidUrl = false;
         }
       }
 
-      if (!isValidUrl || !data.checkoutUrl) {
+      if (!isValidUrl) {
         throw new Error(
           "The payment service has not returned a valid checkout link. No payment has been confirmed."
         );
       }
 
-      const targetUrl = new URL(data.checkoutUrl, window.location.origin);
-      const orderId = targetUrl.searchParams.get("ref") || "";
+      const orderId = order.reference;
 
       const savedOrder = {
         orderId,
@@ -400,14 +395,10 @@ export default function CheckoutPage() {
         date: new Date().toISOString(),
       };
 
-      try {
-        sessionStorage.setItem("last_store_order", JSON.stringify(savedOrder));
-      } catch {
-        // Continue if sessionStorage is restricted
-      }
+      writeJSON("last_store_order", savedOrder, "session");
 
       clearCart();
-      window.location.assign(data.checkoutUrl);
+      window.location.assign(checkoutUrl);
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -737,13 +728,13 @@ export default function CheckoutPage() {
                     id: "standard" as const,
                     title: "Standard dispatch",
                     description: "2–4 business days",
-                    price: 3500,
+                    price: SHIPPING_RATES.standard,
                   },
                   {
                     id: "priority" as const,
                     title: "Priority dispatch",
                     description: "Faster processing",
-                    price: 6500,
+                    price: SHIPPING_RATES.priority,
                   },
                 ]).map((option) => (
                   <button

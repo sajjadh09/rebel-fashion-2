@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { ArrowRight, Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 
 import { useStore } from "@/components/store-provider";
-import { formatPrice } from "@/lib/store-data";
+import { formatPrice } from "@/lib/format";
 
 export function CartDrawer() {
   const { isCartOpen, closeCart, cart, subtotal, updateCartQuantity, removeFromCart } = useStore();

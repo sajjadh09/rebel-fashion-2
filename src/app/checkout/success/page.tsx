@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { Clock, MapPin, ShieldCheck } from "lucide-react";
 
-import { formatPrice } from "@/lib/store-data";
+import { readJSON } from "@/lib/client-storage";
+import { formatPrice } from "@/lib/format";
 
 type SavedOrder = {
   orderId: string;
@@ -38,14 +39,7 @@ function getSessionOrder(): SavedOrder | null {
   if (typeof window === "undefined") return null;
 
   if (!orderInitialized) {
-    try {
-      const raw = sessionStorage.getItem("last_store_order");
-      if (raw) {
-        cachedOrder = JSON.parse(raw) as SavedOrder;
-      }
-    } catch {
-      cachedOrder = null;
-    }
+    cachedOrder = readJSON<SavedOrder | null>("last_store_order", null, "session");
 
     orderInitialized = true;
   }

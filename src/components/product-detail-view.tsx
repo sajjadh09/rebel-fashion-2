@@ -1,24 +1,55 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
-import { Check, Heart, ShieldCheck, ShoppingBag, Sparkles, Truck } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Check, Heart, ShieldCheck, ShoppingBag, Sparkles, Store, Truck } from "lucide-react";
 
 import { ProductCard } from "@/components/product-card";
+import { SmartImage } from "@/components/smart-image";
 import { useStore } from "@/components/store-provider";
-import { formatPrice, getRelatedProducts, type Product } from "@/lib/store-data";
+import { useAsync } from "@/hooks/use-async";
+import { getProducts } from "@/lib/api";
+import { PLATFORM_SELLER_ID } from "@/lib/config";
+import { formatPrice } from "@/lib/format";
+import { kaftanStyles } from "@/lib/seed-data";
+import type { Product } from "@/lib/types";
 
 export function ProductDetailView({ product }: { product: Product }) {
   const { addToCart, isWishlisted, toggleWishlist } = useStore();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [selectedColor, setSelectedColor] = useState(product.colors[0] ?? "");
+  const [selectedColor, setSelectedColor] = useState(product.colors[0]?.name ?? "");
   const [selectedSize, setSelectedSize] = useState(product.sizes[0] ?? "");
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState("");
   const [added, setAdded] = useState(false);
 
-  const relatedProducts = getRelatedProducts(product.id);
+  const styleInfo = kaftanStyles.find((style) => style.slug === product.style);
+  const isMarketplace = product.sellerId !== PLATFORM_SELLER_ID;
+  const colorVariant = product.colors.find((color) => color.name === selectedColor);
+
+  // Photos for the selected colour first, then the general product photos.
+  const gallery = useMemo(() => {
+    const colourPhotos = colorVariant?.images?.length
+      ? colorVariant.images
+      : colorVariant?.image
+        ? [colorVariant.image]
+        : [];
+    const merged = [...colourPhotos, ...product.images];
+    return merged.filter((image, index) => merged.indexOf(image) === index);
+  }, [colorVariant, product.images]);
+
+  const { data: styleProducts } = useAsync(() => getProducts({ style: product.style }), [product.style]);
+  const { data: allProducts } = useAsync(() => getProducts(), []);
+  const relatedProducts = useMemo(() => {
+    const sameStyle = (styleProducts ?? []).filter((item) => item.id !== product.id);
+    const others = (allProducts ?? []).filter((item) => item.id !== product.id && item.style !== product.style && item.gender === product.gender);
+    return [...sameStyle, ...others].slice(0, 4);
+  }, [styleProducts, allProducts, product.id, product.style, product.gender]);
+
+  const chooseColor = (name: string) => {
+    setSelectedColor(name);
+    setActiveImageIndex(0);
+  };
 
   const handleAddToBag = () => {
     if (product.colors.length > 0 && !selectedColor) {
@@ -43,13 +74,13 @@ export function ProductDetailView({ product }: { product: Product }) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       {/* Breadcrumb Navigation */}
-      <nav className="mb-8 flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-[color:var(--brand-charcoal)]/60">
+      <nav className="mb-8 flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-wider text-[color:var(--brand-charcoal)]/60">
         <Link href="/" className="hover:text-[color:var(--brand-deep)]">Home</Link>
         <span>/</span>
         <Link href="/shop" className="hover:text-[color:var(--brand-deep)]">Shop</Link>
         <span>/</span>
-        <Link href={`/shop?category=${product.category}`} className="hover:text-[color:var(--brand-deep)] capitalize">
-          {product.category.replace("-", " ")}
+        <Link href={`/shop?style=${product.style}`} className="hover:text-[color:var(--brand-deep)]">
+          {styleInfo?.name ?? product.style}
         </Link>
         <span>/</span>
         <span className="text-[color:var(--brand-deep)] truncate max-w-xs">{product.name}</span>
@@ -60,13 +91,13 @@ export function ProductDetailView({ product }: { product: Product }) {
         <div className="space-y-4">
           <div className="relative overflow-hidden rounded-[30px] border border-[color:var(--brand-border)] bg-[color:var(--brand-ivory)] shadow-[0_16px_45px_rgba(91,64,50,0.06)]">
             <div className="relative aspect-[3/4] w-full">
-              <Image
-                src={product.images[activeImageIndex] || product.images[0]}
+              <SmartImage
+                src={gallery[activeImageIndex] || gallery[0]}
                 alt={product.name}
                 fill
                 priority
                 sizes="(max-width: 1024px) 100vw, 55vw"
-                className="object-cover transition-opacity duration-300"
+                className="object-cover object-top transition-opacity duration-300"
               />
             </div>
 
@@ -78,9 +109,9 @@ export function ProductDetailView({ product }: { product: Product }) {
           </div>
 
           {/* Thumbnails */}
-          {product.images.length > 1 && (
+          {gallery.length > 1 && (
             <div className="flex gap-3 overflow-x-auto pb-2">
-              {product.images.map((image, index) => (
+              {gallery.map((image, index) => (
                 <button
                   key={`${image}-${index}`}
                   type="button"
@@ -91,12 +122,12 @@ export function ProductDetailView({ product }: { product: Product }) {
                       : "border-[color:var(--brand-border)] hover:border-[color:var(--brand-primary)]"
                   }`}
                 >
-                  <Image
+                  <SmartImage
                     src={image}
                     alt={`${product.name} thumbnail ${index + 1}`}
                     fill
                     sizes="80px"
-                    className="object-cover"
+                    className="object-cover object-top"
                   />
                 </button>
               ))}
@@ -109,7 +140,7 @@ export function ProductDetailView({ product }: { product: Product }) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">
-                Curated Selection
+                {styleInfo?.name ?? "Kaftan"} · {product.gender === "kids" ? "Kids" : product.gender === "women" ? "Women" : product.gender === "men" ? "Men" : "Unisex"}
               </span>
               <button
                 type="button"
@@ -125,9 +156,19 @@ export function ProductDetailView({ product }: { product: Product }) {
               </button>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[color:var(--brand-deep)]">
+            <h1 className="font-display text-3xl text-[color:var(--brand-deep)] sm:text-5xl">
               {product.name}
             </h1>
+
+            <p className="flex items-center gap-1.5 text-sm text-[color:var(--brand-charcoal)]/75">
+              <Store className="h-4 w-4 text-[color:var(--brand-primary)]" />
+              Sold by <span className="font-semibold text-[color:var(--brand-deep)]">{product.sellerName}</span>
+              {isMarketplace && (
+                <span className="ml-1 rounded-full bg-[color:var(--brand-soft)]/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[color:var(--brand-deep)]">
+                  Marketplace seller
+                </span>
+              )}
+            </p>
 
             <div className="flex items-baseline gap-3">
               <span className="text-3xl font-extrabold text-[color:var(--brand-deep)]">
@@ -138,7 +179,13 @@ export function ProductDetailView({ product }: { product: Product }) {
                   {formatPrice(product.compareAtPrice)}
                 </span>
               )}
-              <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">In Stock</span>
+              {product.stock > 0 ? (
+                <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+                  {product.stock <= 5 ? `Only ${product.stock} left` : "In Stock"}
+                </span>
+              ) : (
+                <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-700">Sold out</span>
+              )}
             </div>
 
             <p className="text-sm leading-relaxed text-[color:var(--brand-charcoal)]/80 sm:text-base">
@@ -153,25 +200,34 @@ export function ProductDetailView({ product }: { product: Product }) {
                 <span>Selected Colour:</span>
                 <span className="text-[color:var(--brand-charcoal)]/75">{selectedColor}</span>
               </div>
-              <div className="flex flex-wrap gap-2.5">
+              <div className="flex flex-wrap gap-3">
                 {product.colors.map((color) => {
-                  const isSelected = selectedColor === color;
+                  const isSelected = selectedColor === color.name;
                   return (
                     <button
-                      key={color}
+                      key={color.name}
                       type="button"
-                      onClick={() => setSelectedColor(color)}
-                      className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                      onClick={() => chooseColor(color.name)}
+                      aria-label={`Colour ${color.name}`}
+                      aria-pressed={isSelected}
+                      title={color.name}
+                      className={`relative h-11 w-11 rounded-full border transition ${
                         isSelected
-                          ? "bg-[color:var(--brand-deep)] text-white shadow-sm"
-                          : "border border-[color:var(--brand-border)] bg-white text-[color:var(--brand-charcoal)] hover:bg-[color:var(--brand-soft)]/50"
+                          ? "border-[color:var(--brand-deep)] ring-2 ring-[color:var(--brand-deep)] ring-offset-2"
+                          : "border-black/15 hover:scale-105"
                       }`}
+                      style={{ backgroundColor: color.hex }}
                     >
-                      {color}
+                      {isSelected && (
+                        <Check className={`absolute inset-0 m-auto h-4 w-4 ${isLightColor(color.hex) ? "text-[color:var(--brand-deep)]" : "text-white"}`} />
+                      )}
                     </button>
                   );
                 })}
               </div>
+              {colorVariant && !colorVariant.image && (
+                <p className="text-[11px] text-[color:var(--brand-charcoal)]/55">Photo shows another colour of this style.</p>
+              )}
             </div>
           )}
 
@@ -180,7 +236,7 @@ export function ProductDetailView({ product }: { product: Product }) {
             <div className="space-y-2.5">
               <div className="flex items-center justify-between text-xs uppercase tracking-wider font-semibold text-[color:var(--brand-deep)]">
                 <span>Select Size:</span>
-                <span className="text-[color:var(--brand-primary)] font-medium cursor-pointer hover:underline">Size Guide</span>
+                <span className="text-[color:var(--brand-charcoal)]/60 font-medium normal-case tracking-normal">{selectedSize}</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {product.sizes.map((size) => {
@@ -232,7 +288,8 @@ export function ProductDetailView({ product }: { product: Product }) {
               <button
                 type="button"
                 onClick={handleAddToBag}
-                className="flex flex-1 h-12 items-center justify-center gap-2 rounded-full bg-[color:var(--brand-primary)] px-8 text-sm font-bold uppercase tracking-wider text-[color:var(--brand-deep)] shadow-sm hover:bg-[color:var(--brand-secondary)] transition active:scale-[0.99]"
+                disabled={product.stock <= 0}
+                className="disabled:cursor-not-allowed disabled:opacity-50 flex flex-1 h-12 items-center justify-center gap-2 rounded-full bg-[color:var(--brand-primary)] px-8 text-sm font-bold uppercase tracking-wider text-[color:var(--brand-deep)] shadow-sm hover:bg-[color:var(--brand-secondary)] transition active:scale-[0.99]"
               >
                 {added ? (
                   <>
@@ -280,8 +337,8 @@ export function ProductDetailView({ product }: { product: Product }) {
               <p className="mt-1 text-[color:var(--brand-charcoal)]/75">{product.care}</p>
             </div>
             <div className="rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-3.5">
-              <span className="font-semibold uppercase tracking-wider text-[color:var(--brand-deep)]">Fulfillment</span>
-              <p className="mt-1 text-[color:var(--brand-charcoal)]/75">{product.shipping}</p>
+              <span className="font-semibold uppercase tracking-wider text-[color:var(--brand-deep)]">Sold &amp; shipped by</span>
+              <p className="mt-1 text-[color:var(--brand-charcoal)]/75">{product.sellerName}</p>
             </div>
           </div>
         </div>
@@ -295,15 +352,15 @@ export function ProductDetailView({ product }: { product: Product }) {
               <Sparkles className="h-3.5 w-3.5" />
               <span>Style Curation</span>
             </div>
-            <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-[color:var(--brand-deep)]">
-              Complete the Look
+            <h2 className="font-display mt-1 text-2xl text-[color:var(--brand-deep)] sm:text-4xl">
+              You may also like
             </h2>
           </div>
           <Link
-            href="/shop"
+            href={`/shop?style=${product.style}`}
             className="text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-deep)] hover:text-[color:var(--brand-primary)]"
           >
-            Explore All →
+            More {styleInfo?.name ?? "styles"} →
           </Link>
         </div>
 
@@ -315,4 +372,13 @@ export function ProductDetailView({ product }: { product: Product }) {
       </div>
     </div>
   );
+}
+
+function isLightColor(hex: string): boolean {
+  const value = hex.replace("#", "");
+  if (value.length !== 6) return true;
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  return r * 0.299 + g * 0.587 + b * 0.114 > 170;
 }

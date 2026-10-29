@@ -10,24 +10,23 @@ import {
   Menu,
   Search,
   ShoppingBag,
+  User,
   X,
 } from "lucide-react";
 
 import { useStore } from "@/components/store-provider";
 import AnimatedLogo from "@/components/animated-logo";
+import { SITE_NAME } from "@/lib/config";
+import { kaftanStyles } from "@/lib/seed-data";
 
-const categoryItems = [
-  { href: "/shop?category=graphic-tees", label: "Graphic Tees" },
-  { href: "/shop?category=hoodies", label: "Streetwear" },
-  { href: "/shop?category=cargos", label: "Cargos & Denim" },
-  { href: "/shop?category=co-ords", label: "Co-Ords & Sets" },
-  { href: "/shop?category=blazers", label: "Tailoring" },
-  { href: "/shop?category=accessories", label: "Accessories" },
-];
+const categoryItems = kaftanStyles.map((style) => ({
+  href: `/shop?style=${style.slug}`,
+  label: style.name,
+}));
 
 const navItems = [
-  { href: "/", label: "Home" },
-  { href: "/shop", label: "Shop All" },
+  { href: "/shop", label: "Shop" },
+  { href: `/sell`, label: `Sell on ${SITE_NAME}` },
 ];
 
 export function Header() {
@@ -76,28 +75,24 @@ export function Header() {
           </div>
 
           <nav className="hidden items-center gap-1 lg:flex">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-wider ${
-                  pathname === item.href
+            <NavLink href="/shop" label="Shop" active={pathname === "/shop"} />
+
+            <div
+              className="relative"
+              onMouseLeave={() => setCategoriesOpen(false)}
+            >
+              <button
+                type="button"
+                onClick={() => setCategoriesOpen((value) => !value)}
+                onMouseEnter={() => setCategoriesOpen(true)}
+                aria-expanded={categoriesOpen}
+                className={`inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-wider ${
+                  pathname === "/styles"
                     ? "bg-[color:var(--brand-primary)] text-[color:var(--brand-deep)]"
                     : "text-[color:var(--brand-charcoal)]/80 hover:bg-[color:var(--brand-soft)]/60"
                 }`}
               >
-                {item.label}
-              </Link>
-            ))}
-
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setCategoriesOpen((value) => !value)}
-                aria-expanded={categoriesOpen}
-                className="inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]/80 hover:bg-[color:var(--brand-soft)]/60"
-              >
-                Categories
+                Kaftans by style
                 <ChevronDown
                   className={`h-3.5 w-3.5 transition ${
                     categoriesOpen ? "rotate-180" : ""
@@ -106,20 +101,31 @@ export function Header() {
               </button>
 
               {categoriesOpen && (
-                <div className="absolute left-0 top-full mt-2 w-56 rounded-2xl border border-[color:var(--brand-border)] bg-white p-2 shadow-xl">
-                  {categoryItems.map((item) => (
+                <div className="absolute left-0 top-full z-50 w-64 pt-2">
+                  <div className="rounded-2xl border border-[color:var(--brand-border)] bg-white p-2 shadow-xl">
+                    {categoryItems.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setCategoriesOpen(false)}
+                        className="block rounded-xl px-3 py-2.5 text-xs font-semibold text-[color:var(--brand-charcoal)] hover:bg-[color:var(--brand-soft)]/50"
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
                     <Link
-                      key={item.href}
-                      href={item.href}
+                      href="/styles"
                       onClick={() => setCategoriesOpen(false)}
-                      className="block rounded-xl px-3 py-2.5 text-xs font-semibold text-[color:var(--brand-charcoal)] hover:bg-[color:var(--brand-soft)]/50"
+                      className="mt-1 block rounded-xl border-t border-[color:var(--brand-border)] px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] hover:bg-[color:var(--brand-soft)]/50"
                     >
-                      {item.label}
+                      View all styles →
                     </Link>
-                  ))}
+                  </div>
                 </div>
               )}
             </div>
+
+            <NavLink href="/sell" label={`Sell on ${SITE_NAME}`} active={pathname === "/sell" || pathname.startsWith("/seller")} />
           </nav>
 
           <div className="hidden max-w-xs flex-1 justify-center md:flex">
@@ -133,7 +139,7 @@ export function Header() {
                   id="header-search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search products..."
+                  placeholder="Search kaftans..."
                   className="w-full min-w-0 bg-transparent text-xs outline-none"
                 />
               </div>
@@ -141,6 +147,14 @@ export function Header() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+            <Link
+              href="/account"
+              className="hidden h-10 w-10 items-center justify-center rounded-full border border-[color:var(--brand-border)] bg-white text-[color:var(--brand-deep)] sm:inline-flex"
+              aria-label="Account"
+            >
+              <User className="h-4 w-4" />
+            </Link>
+
             <Link
               href="/wishlist"
               className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--brand-border)] bg-white text-[color:var(--brand-deep)]"
@@ -183,7 +197,7 @@ export function Header() {
                   id="mobile-search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search products..."
+                  placeholder="Search kaftans..."
                   className="w-full min-w-0 bg-transparent text-sm outline-none"
                 />
               </div>
@@ -202,9 +216,13 @@ export function Header() {
               ))}
 
               <div className="border-t border-[color:var(--brand-border)] pt-2">
-                <p className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-primary)]">
-                  Categories
-                </p>
+                <Link
+                  href="/styles"
+                  onClick={() => setMenuOpen(false)}
+                  className="block px-3 py-2 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-primary)]"
+                >
+                  Kaftans by style
+                </Link>
 
                 {categoryItems.map((item) => (
                   <Link
@@ -235,11 +253,30 @@ export function Header() {
                 >
                   Wishlist ({wishlist.length})
                 </Link>
+
+                <Link href="/account" onClick={() => setMenuOpen(false)}>
+                  Account
+                </Link>
               </div>
             </div>
           </div>
         )}
       </div>
     </header>
+  );
+}
+
+function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-wider ${
+        active
+          ? "bg-[color:var(--brand-primary)] text-[color:var(--brand-deep)]"
+          : "text-[color:var(--brand-charcoal)]/80 hover:bg-[color:var(--brand-soft)]/60"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }
