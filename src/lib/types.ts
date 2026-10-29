@@ -9,21 +9,16 @@ export type Gender = "men" | "women" | "kids" | "unisex";
 /** Listing moderation status. Only "approved" products are visible in the shop. */
 export type ListingStatus = "pending" | "approved" | "rejected";
 
-export type ProductCategory =
-  | "kaftan"
-  | "agbada"
-  | "abaya"
-  | "jalabiya"
-  | "caps-accessories"
-  | "other-clothing";
-
-/** A kaftan style family, e.g. Agbada-style, Senator, Moroccan caftan. */
-export type KaftanStyle = {
-  slug: string;
-  name: string;
-  description: string;
-  image: string;
-  gender: Gender;
+/**
+ * The "Type" choice a shopper makes before adding to the bag, e.g.
+ * { label: "Length", values: ["Short", "Long"] } or { label: "For", values: ["Men", "Women"] }.
+ * Optional: products without it only ask for colour and size.
+ */
+export type ProductTypeOption = {
+  /** Heading shown above the choices, e.g. "Length", "Fit", "For", "Set". */
+  label: string;
+  /** The choices, e.g. ["Short", "Long"]. */
+  values: string[];
 };
 
 /** One colour option of a product. `image`/`images` are optional colour-specific photos. */
@@ -42,10 +37,12 @@ export type Product = {
   slug: string;
   name: string;
   description: string;
-  category: ProductCategory;
-  /** KaftanStyle.slug */
-  style: string;
+  /** Free-text product type entered by the seller, e.g. "Kaftan", "Shirt", "Dress", "Bag". Display only, not a category. */
+  productType: string;
+  /** "unisex" also means "not specified". */
   gender: Gender;
+  /** Optional Type choice (e.g. Short/Long). Shoppers must pick one when present. */
+  typeOption?: ProductTypeOption | null;
   price: number;
   compareAtPrice?: number;
   badge?: string;
@@ -64,8 +61,6 @@ export type Product = {
   rejectionReason?: string;
   createdAt: string;
   updatedAt?: string;
-  /** True for the built-in demo catalogue. */
-  isDemo?: boolean;
 };
 
 export type BankDetails = {
@@ -111,9 +106,12 @@ export type AdminSession = {
 export type NewListingInput = {
   name: string;
   description: string;
-  category: ProductCategory;
-  style: string;
-  gender: Gender;
+  /** Free text, e.g. "Shirt", "Dress", "Kaftan", "Shoes", "Bag". */
+  productType: string;
+  /** Optional. Omitted or "unisex" = not specified. */
+  gender?: Gender;
+  /** Optional Type choice shoppers pick from, e.g. { label: "Length", values: ["Short", "Long"] }. */
+  typeOption?: ProductTypeOption | null;
   sizes: string[];
   colors: ColorVariant[];
   images: string[];
@@ -124,7 +122,6 @@ export type NewListingInput = {
 
 export type ProductFilters = {
   gender?: Gender | "all";
-  style?: string;
   search?: string;
   sellerId?: string;
   ids?: string[];
@@ -149,6 +146,8 @@ export type OrderItem = {
   slug: string;
   name: string;
   image: string;
+  /** Chosen Type value (e.g. "Long"), empty when the product has no Type option. */
+  type?: string;
   color: string;
   size: string;
   quantity: number;
@@ -196,6 +195,8 @@ export type CreateOrderItemInput = {
   slug: string;
   name: string;
   image: string;
+  /** Chosen Type value (e.g. "Long"), empty when the product has no Type option. */
+  type?: string;
   color: string;
   size: string;
   quantity: number;
@@ -244,7 +245,7 @@ export type AdminOverview = {
   gmv: number;
   /** Platform commission earned on marketplace (third-party) sales, excluding cancelled. */
   commissionEarned: number;
-  /** Revenue from the platform's own kaftans, excluding cancelled. */
+  /** Revenue from the platform's own products, excluding cancelled. */
   ownStoreRevenue: number;
   /** Amount owed to / paid to sellers, excluding cancelled. */
   sellerPayouts: number;

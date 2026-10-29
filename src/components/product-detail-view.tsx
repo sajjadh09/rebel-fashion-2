@@ -5,27 +5,26 @@ import { useMemo, useState } from "react";
 import { Check, Heart, ShieldCheck, ShoppingBag, Sparkles, Store, Truck } from "lucide-react";
 
 import { ProductCard } from "@/components/product-card";
+import { initialSelection, missingSelection, ProductOptions, type ProductSelection } from "@/components/product-options";
 import { SmartImage } from "@/components/smart-image";
 import { useStore } from "@/components/store-provider";
 import { useAsync } from "@/hooks/use-async";
 import { getProducts } from "@/lib/api";
 import { PLATFORM_SELLER_ID } from "@/lib/config";
 import { formatPrice } from "@/lib/format";
-import { kaftanStyles } from "@/lib/seed-data";
 import type { Product } from "@/lib/types";
 
 export function ProductDetailView({ product }: { product: Product }) {
   const { addToCart, isWishlisted, toggleWishlist } = useStore();
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [selectedColor, setSelectedColor] = useState(product.colors[0]?.name ?? "");
-  const [selectedSize, setSelectedSize] = useState(product.sizes[0] ?? "");
+  const [selection, setSelection] = useState<ProductSelection>(() => initialSelection(product));
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState("");
   const [added, setAdded] = useState(false);
 
-  const styleInfo = kaftanStyles.find((style) => style.slug === product.style);
   const isMarketplace = product.sellerId !== PLATFORM_SELLER_ID;
-  const colorVariant = product.colors.find((color) => color.name === selectedColor);
+  const colorVariant = product.colors.find((color) => color.name === selection.color);
+  const genderLabel = product.gender === "kids" ? "Kids" : product.gender === "women" ? "Women" : product.gender === "men" ? "Men" : "Unisex";
 
   // Photos for the selected colour first, then the general product photos.
   const gallery = useMemo(() => {
@@ -38,33 +37,24 @@ export function ProductDetailView({ product }: { product: Product }) {
     return merged.filter((image, index) => merged.indexOf(image) === index);
   }, [colorVariant, product.images]);
 
-  const { data: styleProducts } = useAsync(() => getProducts({ style: product.style }), [product.style]);
   const { data: allProducts } = useAsync(() => getProducts(), []);
   const relatedProducts = useMemo(() => {
-    const sameStyle = (styleProducts ?? []).filter((item) => item.id !== product.id);
-    const others = (allProducts ?? []).filter((item) => item.id !== product.id && item.style !== product.style && item.gender === product.gender);
-    return [...sameStyle, ...others].slice(0, 4);
-  }, [styleProducts, allProducts, product.id, product.style, product.gender]);
-
-  const chooseColor = (name: string) => {
-    setSelectedColor(name);
-    setActiveImageIndex(0);
-  };
+    const others = (allProducts ?? []).filter((item) => item.id !== product.id);
+    const sameGender = others.filter((item) => item.gender === product.gender);
+    const rest = others.filter((item) => item.gender !== product.gender);
+    return [...sameGender, ...rest].slice(0, 4);
+  }, [allProducts, product.id, product.gender]);
 
   const handleAddToBag = () => {
-    if (product.colors.length > 0 && !selectedColor) {
-      setError("Please select a colour before adding this item to your bag.");
-      return;
-    }
-
-    if (product.sizes.length > 0 && !selectedSize) {
-      setError("Please select a size before adding this item to your bag.");
+    const missing = missingSelection(product, selection);
+    if (missing) {
+      setError(missing);
       return;
     }
 
     setError("");
     addToCart(
-      { product, color: selectedColor, size: selectedSize, quantity },
+      { product, type: selection.type, color: selection.color, size: selection.size, quantity },
       true // open drawer
     );
     setAdded(true);
@@ -79,8 +69,8 @@ export function ProductDetailView({ product }: { product: Product }) {
         <span>/</span>
         <Link href="/shop" className="hover:text-[color:var(--brand-deep)]">Shop</Link>
         <span>/</span>
-        <Link href={`/shop?style=${product.style}`} className="hover:text-[color:var(--brand-deep)]">
-          {styleInfo?.name ?? product.style}
+        <Link href={`/shop?gender=${product.gender === "unisex" ? "all" : product.gender}`} className="hover:text-[color:var(--brand-deep)]">
+          {genderLabel}
         </Link>
         <span>/</span>
         <span className="text-[color:var(--brand-deep)] truncate max-w-xs">{product.name}</span>
@@ -140,7 +130,7 @@ export function ProductDetailView({ product }: { product: Product }) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">
-                {styleInfo?.name ?? "Kaftan"} · {product.gender === "kids" ? "Kids" : product.gender === "women" ? "Women" : product.gender === "men" ? "Men" : "Unisex"}
+                {product.productType} · {genderLabel}
               </span>
               <button
                 type="button"
@@ -193,71 +183,19 @@ export function ProductDetailView({ product }: { product: Product }) {
             </p>
           </div>
 
-          {/* Color Selector */}
-          {product.colors.length > 0 && (
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between text-xs uppercase tracking-wider font-semibold text-[color:var(--brand-deep)]">
-                <span>Selected Colour:</span>
-                <span className="text-[color:var(--brand-charcoal)]/75">{selectedColor}</span>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {product.colors.map((color) => {
-                  const isSelected = selectedColor === color.name;
-                  return (
-                    <button
-                      key={color.name}
-                      type="button"
-                      onClick={() => chooseColor(color.name)}
-                      aria-label={`Colour ${color.name}`}
-                      aria-pressed={isSelected}
-                      title={color.name}
-                      className={`relative h-11 w-11 rounded-full border transition ${
-                        isSelected
-                          ? "border-[color:var(--brand-deep)] ring-2 ring-[color:var(--brand-deep)] ring-offset-2"
-                          : "border-black/15 hover:scale-105"
-                      }`}
-                      style={{ backgroundColor: color.hex }}
-                    >
-                      {isSelected && (
-                        <Check className={`absolute inset-0 m-auto h-4 w-4 ${isLightColor(color.hex) ? "text-[color:var(--brand-deep)]" : "text-white"}`} />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              {colorVariant && !colorVariant.image && (
-                <p className="text-[11px] text-[color:var(--brand-charcoal)]/55">Photo shows another colour of this style.</p>
-              )}
-            </div>
-          )}
-
-          {/* Size Selector */}
-          {product.sizes.length > 0 && (
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between text-xs uppercase tracking-wider font-semibold text-[color:var(--brand-deep)]">
-                <span>Select Size:</span>
-                <span className="text-[color:var(--brand-charcoal)]/60 font-medium normal-case tracking-normal">{selectedSize}</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {product.sizes.map((size) => {
-                  const isSelected = selectedSize === size;
-                  return (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => setSelectedSize(size)}
-                      className={`flex h-11 min-w-12 items-center justify-center rounded-2xl px-3 text-xs font-bold transition ${
-                        isSelected
-                          ? "bg-[color:var(--brand-primary)] text-[color:var(--brand-deep)] ring-2 ring-[color:var(--brand-deep)]/20 shadow-sm"
-                          : "border border-[color:var(--brand-border)] bg-white text-[color:var(--brand-charcoal)] hover:border-[color:var(--brand-primary)]"
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+          {/* Type, colour and size */}
+          <ProductOptions
+            product={product}
+            value={selection}
+            onChange={(next) => {
+              if (next.color !== selection.color) setActiveImageIndex(0);
+              setSelection(next);
+              setError("");
+            }}
+            idPrefix="pdp"
+          />
+          {colorVariant && !colorVariant.image && product.colors.length > 1 && (
+            <p className="-mt-4 text-[11px] text-[color:var(--brand-charcoal)]/55">Photo shows {product.colors[0]?.name}; you&apos;ll receive {colorVariant.name}.</p>
           )}
 
           {/* Quantity and Add to Bag */}
@@ -357,10 +295,10 @@ export function ProductDetailView({ product }: { product: Product }) {
             </h2>
           </div>
           <Link
-            href={`/shop?style=${product.style}`}
+            href="/shop"
             className="text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-deep)] hover:text-[color:var(--brand-primary)]"
           >
-            More {styleInfo?.name ?? "styles"} →
+            Shop all →
           </Link>
         </div>
 
@@ -372,13 +310,4 @@ export function ProductDetailView({ product }: { product: Product }) {
       </div>
     </div>
   );
-}
-
-function isLightColor(hex: string): boolean {
-  const value = hex.replace("#", "");
-  if (value.length !== 6) return true;
-  const r = parseInt(value.slice(0, 2), 16);
-  const g = parseInt(value.slice(2, 4), 16);
-  const b = parseInt(value.slice(4, 6), 16);
-  return r * 0.299 + g * 0.587 + b * 0.114 > 170;
 }

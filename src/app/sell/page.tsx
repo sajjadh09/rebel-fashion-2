@@ -6,11 +6,11 @@ import { ArrowRight, Banknote, BadgeCheck, Camera, Percent, ShieldCheck, Store, 
 import { Marquee } from "@/components/marquee";
 import { PLATFORM_COMMISSION_PERCENT, SITE_NAME } from "@/lib/config";
 import { formatPrice } from "@/lib/format";
-import { HERO_IMAGES } from "@/lib/seed-data";
+import { KAFTAN_FEATURE_IMAGES } from "@/lib/seed-data";
 
 export const metadata: Metadata = {
   title: `Sell on ${SITE_NAME}`,
-  description: `Open a kaftan store on ${SITE_NAME}. ${PLATFORM_COMMISSION_PERCENT}% commission, payouts straight to your bank account.`,
+  description: `Open a clothing store on ${SITE_NAME}. ${PLATFORM_COMMISSION_PERCENT}% commission, payouts straight to your bank account.`,
 };
 
 const EXAMPLE_PRICE = 100000;
@@ -19,14 +19,14 @@ const exampleCommission = Math.round((EXAMPLE_PRICE * PLATFORM_COMMISSION_PERCEN
 const steps = [
   { icon: UserPlus, title: "Create your seller account", body: "Tell us your business name and the bank account you want to be paid into. It takes two minutes." },
   { icon: Camera, title: "List your pieces", body: "Upload photos, add colours, sizes, price and stock. Every listing is reviewed by our team." },
-  { icon: BadgeCheck, title: "Go live", body: "Once approved, your kaftans appear in the shop and on the homepage with \u201cSold by\u201d your store name." },
+  { icon: BadgeCheck, title: "Go live", body: "Once approved, your products appear in the shop and on the homepage with \u201cSold by\u201d your store name." },
   { icon: Banknote, title: "Get paid directly", body: "When a customer pays, your share goes straight to your bank account through Paystack." },
 ];
 
 const faqs = [
   { q: "How much does it cost?", a: `Opening a store is free. We take ${PLATFORM_COMMISSION_PERCENT}% of each item you sell — nothing else.` },
   { q: "When do I get my money?", a: "Payments are split automatically by Paystack at checkout. Your share is settled to your own bank account on Paystack's normal settlement schedule." },
-  { q: "What can I sell?", a: "Kaftans of every style — agbada, senator, jalabiya, abaya, Moroccan caftans, kids' kaftans — plus matching caps and other quality clothing." },
+  { q: "What can I sell?", a: "Any clothing or fashion accessory: shirts, dresses, trousers, kaftans, abayas, kids' wear, shoes, bags, caps and more. You choose the product type, sizes and colours." },
   { q: "Who handles delivery?", a: "You prepare and ship your orders. You'll see every order and the customer's delivery details in your seller dashboard." },
 ];
 
@@ -38,14 +38,14 @@ export default function SellPage() {
           <div>
             <span className="eyebrow">Sell on {SITE_NAME}</span>
             <h1 className="font-display mt-4 text-5xl leading-[0.95] text-[color:var(--brand-deep)] sm:text-7xl">
-              Your kaftans. <em className="text-[color:var(--brand-primary)]">Our runway.</em>
+              Your fashion. <em className="text-[color:var(--brand-primary)]">Our runway.</em>
             </h1>
             <p className="mt-6 max-w-lg text-sm leading-relaxed text-[color:var(--brand-charcoal)]/80 sm:text-base">
-              Join Nigeria&apos;s kaftan marketplace. Reach shoppers nationwide, keep {100 - PLATFORM_COMMISSION_PERCENT}% of every sale and get paid straight to your own bank account.
+              Sell clothes and accessories on {SITE_NAME}. Reach shoppers nationwide, keep {100 - PLATFORM_COMMISSION_PERCENT}% of every sale and get paid straight to your own bank account.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link href="/seller/signup" className="inline-flex items-center justify-center gap-2 rounded-full bg-[color:var(--brand-deep)] px-8 py-3.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[color:var(--brand-chocolate)]">
-                Open your store <ArrowRight className="h-4 w-4" />
+                Create seller account <ArrowRight className="h-4 w-4" />
               </Link>
               <Link href="/seller/login" className="inline-flex items-center justify-center rounded-full border border-[color:var(--brand-deep)]/25 px-8 py-3.5 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] transition hover:bg-[color:var(--brand-soft)]/50">
                 Seller login
@@ -53,10 +53,10 @@ export default function SellPage() {
             </div>
           </div>
           <div className="relative aspect-[4/5] overflow-hidden rounded-[32px] border border-[color:var(--brand-border)]">
-            <Image src={HERO_IMAGES.sell} alt="Hand-woven aso-oke agbada" fill priority sizes="(max-width: 1024px) 100vw, 45vw" className="object-cover object-top" />
+            <Image src={KAFTAN_FEATURE_IMAGES.women} alt="Emerald satin abaya kaftan on a mannequin" fill priority sizes="(max-width: 1024px) 100vw, 45vw" className="object-cover object-top" />
             <div className="absolute inset-x-4 bottom-4 rounded-2xl bg-white/92 p-4 shadow-lg backdrop-blur sm:inset-x-6 sm:bottom-6">
               <p className="flex items-center gap-2 text-xs font-semibold text-[color:var(--brand-deep)]">
-                <Store className="h-4 w-4 text-[color:var(--brand-primary)]" /> Sold by Arewa Threads
+                <Store className="h-4 w-4 text-[color:var(--brand-primary)]" /> Sold by Your Store Name
               </p>
               <p className="mt-1 text-[11px] text-[color:var(--brand-charcoal)]/70">Your store name appears on every product you list.</p>
             </div>
@@ -111,7 +111,7 @@ export default function SellPage() {
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">Example sale</p>
             <dl className="mt-6 space-y-4 text-sm">
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                <dt>Customer pays for your kaftan</dt>
+                <dt>Customer pays for your item</dt>
                 <dd className="font-display text-2xl text-white">{formatPrice(EXAMPLE_PRICE)}</dd>
               </div>
               <div className="flex items-center justify-between border-b border-white/10 pb-4">

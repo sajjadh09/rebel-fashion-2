@@ -33,7 +33,7 @@ export default function WishlistPage() {
             Your wishlist is empty
           </h1>
           <p className="mt-2 max-w-md mx-auto text-sm text-[color:var(--brand-charcoal)]/70 leading-relaxed">
-            Tap the heart on any kaftan to save it here for later.
+            Tap the heart on any product to save it here for later.
           </p>
           <Link
             href="/shop"

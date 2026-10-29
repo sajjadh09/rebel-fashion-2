@@ -22,8 +22,7 @@ import {
   updateOrderStatus,
 } from "@/lib/api";
 import { PLATFORM_COMMISSION_PERCENT, PLATFORM_SELLER_ID, SITE_NAME } from "@/lib/config";
-import { formatDate, formatPrice, maskAccountNumber } from "@/lib/format";
-import { kaftanStyles } from "@/lib/seed-data";
+import { formatDate, formatLineOptions, formatPrice, maskAccountNumber } from "@/lib/format";
 import type { Order, OrderStatus, Product } from "@/lib/types";
 
 type Tab = "overview" | "pending" | "products" | "sellers" | "orders";
@@ -104,7 +103,7 @@ export default function AdminDashboardPage() {
               <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 lg:grid-cols-4">
                 <StatCard label="GMV" value={formatPrice(o.gmv)} hint="Order subtotals, excl. cancelled" />
                 <StatCard label={`Commission earned (${PLATFORM_COMMISSION_PERCENT}%)`} value={formatPrice(o.commissionEarned)} hint="From marketplace sellers" />
-                <StatCard label="Own-store revenue" value={formatPrice(o.ownStoreRevenue)} hint={`${SITE_NAME} kaftans`} />
+                <StatCard label="Own-store revenue" value={formatPrice(o.ownStoreRevenue)} hint={`Sold by ${SITE_NAME}`} />
                 <StatCard label="Owed to sellers" value={formatPrice(o.sellerPayouts)} hint="Settled via Paystack split" />
                 <StatCard label="Orders" value={String(o.orderCount)} hint={`${o.ordersByStatus.paid} paid · ${o.ordersByStatus.shipped} shipped`} />
                 <StatCard label="Live products" value={String(o.productCounts.approved)} hint={`${o.productCounts.total} total`} />
@@ -141,7 +140,7 @@ export default function AdminDashboardPage() {
                   <tr>
                     <th className="px-4 py-3">Product</th>
                     <th className="px-4 py-3">Seller</th>
-                    <th className="px-4 py-3">Style</th>
+                    <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Price</th>
                     <th className="px-4 py-3">Stock</th>
                     <th className="px-4 py-3">Status</th>
@@ -163,7 +162,7 @@ export default function AdminDashboardPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">{product.sellerId === PLATFORM_SELLER_ID ? <span className="text-[color:var(--brand-primary)] font-semibold">{SITE_NAME} (own)</span> : product.sellerName}</td>
-                      <td className="px-4 py-3">{kaftanStyles.find((s) => s.slug === product.style)?.name ?? product.style}</td>
+                      <td className="px-4 py-3">{product.productType}</td>
                       <td className="px-4 py-3">{formatPrice(product.price)}</td>
                       <td className="px-4 py-3">{product.stock}</td>
                       <td className="px-4 py-3"><StatusBadge status={product.status} /></td>
@@ -277,8 +276,11 @@ function PendingListing({ product, onDone }: { product: Product; onDone: () => v
           <dl className="mt-4 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 text-xs sm:grid-cols-4">
             <div><dt className="text-[color:var(--brand-charcoal)]/55">Price</dt><dd className="font-bold">{formatPrice(product.price)}</dd></div>
             <div><dt className="text-[color:var(--brand-charcoal)]/55">Stock</dt><dd className="font-bold">{product.stock}</dd></div>
-            <div><dt className="text-[color:var(--brand-charcoal)]/55">Style</dt><dd className="font-bold">{kaftanStyles.find((s) => s.slug === product.style)?.name ?? product.style}</dd></div>
-            <div><dt className="text-[color:var(--brand-charcoal)]/55">Gender / category</dt><dd className="font-bold capitalize">{product.gender} · {product.category.replace("-", " ")}</dd></div>
+            <div><dt className="text-[color:var(--brand-charcoal)]/55">Product type</dt><dd className="font-bold">{product.productType}</dd></div>
+            <div><dt className="text-[color:var(--brand-charcoal)]/55">Gender</dt><dd className="font-bold capitalize">{product.gender === "unisex" ? "Unisex / not set" : product.gender}</dd></div>
+            {product.typeOption && product.typeOption.values.length > 0 && (
+              <div className="col-span-2"><dt className="text-[color:var(--brand-charcoal)]/55">{product.typeOption.label} options</dt><dd className="font-bold">{product.typeOption.values.join(", ")}</dd></div>
+            )}
             <div className="col-span-2"><dt className="text-[color:var(--brand-charcoal)]/55">Sizes</dt><dd className="font-bold">{product.sizes.join(", ")}</dd></div>
             <div className="col-span-2">
               <dt className="text-[color:var(--brand-charcoal)]/55">Colours</dt>
@@ -389,9 +391,9 @@ function OrderCard({ order, onChanged }: { order: Order; onChanged: () => void }
       {open && (
         <div className="mt-4 space-y-2 border-t border-[color:var(--brand-border)] pt-4 text-xs">
           {order.items.map((item) => (
-            <div key={`${item.productId}-${item.color}-${item.size}`} className="flex flex-wrap items-center justify-between gap-2">
+            <div key={`${item.productId}-${item.type ?? ""}-${item.color}-${item.size}`} className="flex flex-wrap items-center justify-between gap-2">
               <span>
-                {item.quantity} × <strong>{item.name}</strong> ({item.color}, {item.size}) · {item.sellerName}
+                {item.quantity} × <strong>{item.name}</strong> ({formatLineOptions(item)}) · {item.sellerName}
               </span>
               <span>
                 {formatPrice(item.lineTotal)} → commission {formatPrice(item.commissionAmount)} ({item.commissionPercent}%) · seller {formatPrice(item.sellerAmount)}

@@ -109,11 +109,11 @@ export async function POST(request: NextRequest) {
     let sellerId: string;
 
     if (seedProduct) {
-      // Demo catalogue: the server knows the real price.
+      // Platform catalogue: the server knows the real price.
       unitPrice = seedProduct.price;
       sellerId = seedProduct.sellerId;
     } else {
-      // Listings created by sellers in demo mode only exist in the shopper's browser,
+      // Listings created by sellers in mock mode only exist in the shopper's browser,
       // so the mock has to trust the submitted price. The real backend must ALWAYS
       // look the price up in its own database.
       const submitted = typeof item.unitPrice === "number" ? item.unitPrice : item.price;

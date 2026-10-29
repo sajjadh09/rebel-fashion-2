@@ -21,7 +21,7 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   title: `${SITE_NAME} | ${SITE_TAGLINE}`,
-  description: `Shop agbada, senator, jalabiya, abaya and Moroccan kaftans from ${SITE_NAME} and approved independent sellers across Nigeria.`,
+  description: `Discover and shop stylish clothing and fashion essentials at ${SITE_NAME}, from our own collection and approved independent sellers. Now in: kaftans.`,
 };
 
 // Runs before first paint: on the homepage, covers the page until the intro

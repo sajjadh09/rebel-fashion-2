@@ -32,3 +32,8 @@ export function maskAccountNumber(value: string): string {
   if (value.length <= 4) return value;
   return "•".repeat(Math.max(0, value.length - 4)) + value.slice(-4);
 }
+
+/** "Long · White · M" — the options a shopper chose for a bag/order line. */
+export function formatLineOptions(line: { type?: string; color?: string; size?: string }): string {
+  return [line.type, line.color, line.size].filter((value) => value && value.trim()).join(" · ");
+}

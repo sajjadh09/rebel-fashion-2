@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Heart, Plus, Store } from "lucide-react";
+import { useState } from "react";
+import { Heart, SlidersHorizontal, Store } from "lucide-react";
 
+import { QuickAddSheet } from "@/components/quick-add-sheet";
 import { SmartImage } from "@/components/smart-image";
 import { useStore } from "@/components/store-provider";
 import { PLATFORM_SELLER_ID } from "@/lib/config";
@@ -16,23 +18,16 @@ export function ProductCard({
   product: Product;
   animationDelay?: string;
 }) {
-  const { isWishlisted, toggleWishlist, addToCart } = useStore();
+  const { isWishlisted, toggleWishlist } = useStore();
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const hoverImage = product.images[1] ?? product.colors[1]?.image;
   const isMarketplace = product.sellerId !== PLATFORM_SELLER_ID;
+  const typeValues = product.typeOption?.values ?? [];
 
-  const handleQuickAdd = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const openOptions = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
-
-    addToCart(
-      {
-        product,
-        color: product.colors[0]?.name,
-        size: product.sizes[0],
-        quantity: 1,
-      },
-      false
-    );
+    setOptionsOpen(true);
   };
 
   return (
@@ -93,14 +88,15 @@ export function ProductCard({
           />
         </button>
 
-        <div className="absolute inset-x-3 bottom-3 opacity-0 transition group-hover:opacity-100 max-sm:opacity-100">
+        <div className="absolute inset-x-3 bottom-3 opacity-0 transition group-hover:opacity-100 max-lg:opacity-100">
           <button
             type="button"
-            onClick={handleQuickAdd}
-            className="flex w-full items-center justify-center gap-2 rounded-full border border-white/70 bg-white/95 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] transition hover:bg-[color:var(--brand-ivory)] active:scale-[0.98]"
+            onClick={openOptions}
+            disabled={product.stock <= 0}
+            className="flex w-full items-center justify-center gap-2 rounded-full border border-white/70 bg-white/95 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] transition hover:bg-[color:var(--brand-ivory)] active:scale-[0.98] disabled:opacity-60"
           >
-            <Plus className="h-4 w-4" />
-            Add to Bag
+            <SlidersHorizontal className="h-4 w-4" />
+            {product.stock <= 0 ? "Sold out" : "Choose options"}
           </button>
         </div>
       </div>
@@ -127,6 +123,12 @@ export function ProductCard({
             </h3>
           </Link>
 
+          <p className="mt-1 truncate text-[11px] text-[color:var(--brand-charcoal)]/60">
+            {[typeValues.length > 0 ? typeValues.join(" / ") : product.productType, product.sizes.length > 0 ? `${product.sizes[0]}–${product.sizes[product.sizes.length - 1]}` : ""]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+
           <p className="mt-1 flex items-center gap-1 truncate text-xs text-[color:var(--brand-charcoal)]/65">
             {isMarketplace && <Store className="h-3 w-3 shrink-0 text-[color:var(--brand-primary)]" />}
             <span className="truncate">Sold by {product.sellerName}</span>
@@ -141,14 +143,18 @@ export function ProductCard({
             )}
           </span>
 
-          <Link
-            href={`/product/${product.slug}`}
-            className="text-xs font-medium text-[color:var(--brand-deep)] hover:text-[color:var(--brand-primary)]"
+          <button
+            type="button"
+            onClick={openOptions}
+            disabled={product.stock <= 0}
+            className="rounded-full bg-[color:var(--brand-primary)] px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[color:var(--brand-deep)] transition hover:bg-[color:var(--brand-secondary)] disabled:opacity-50"
           >
-            Details →
-          </Link>
+            Add +
+          </button>
         </div>
       </div>
+
+      {optionsOpen && <QuickAddSheet product={product} onClose={() => setOptionsOpen(false)} />}
     </article>
   );
 }

@@ -1,5 +1,5 @@
 /**
- * Real backend implementation (used when NEXT_PUBLIC_USE_MOCK_API="false").
+ * Real backend implementation (used when NEXT_PUBLIC_API_MODE="http", or legacy NEXT_PUBLIC_USE_MOCK_API="false").
  *
  * Every call goes to `${NEXT_PUBLIC_API_BASE_URL}<path>`. The backend contract
  * (paths, JSON bodies, responses, auth) is documented in BACKEND.md.
@@ -12,7 +12,6 @@ import type {
   AdminOverview,
   AdminSession,
   CreateOrderResult,
-  KaftanStyle,
   Order,
   Product,
   ProductFilters,
@@ -63,7 +62,6 @@ async function request<T>(
 function toQuery(filters: ProductFilters = {}): string {
   const params = new URLSearchParams();
   if (filters.gender && filters.gender !== "all") params.set("gender", filters.gender);
-  if (filters.style) params.set("style", filters.style);
   if (filters.search) params.set("search", filters.search);
   if (filters.sellerId) params.set("seller", filters.sellerId);
   if (filters.ids?.length) params.set("ids", filters.ids.join(","));
@@ -73,7 +71,6 @@ function toQuery(filters: ProductFilters = {}): string {
 
 export const httpApi: DataApi = {
   // Catalogue
-  getStyles: () => request<KaftanStyle[]>("/styles"),
   getProducts: (filters) => request<Product[]>(`/products${toQuery(filters)}`),
   async getProduct(slugOrId) {
     try {

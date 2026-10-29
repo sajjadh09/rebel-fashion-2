@@ -2,12 +2,13 @@ import Link from "next/link";
 import { Lock, ShieldCheck } from "lucide-react";
 import AnimatedLogo from "@/components/animated-logo";
 import { PLATFORM_COMMISSION_PERCENT, SITE_NAME } from "@/lib/config";
-import { kaftanStyles } from "@/lib/seed-data";
-
-const footerShopLinks = kaftanStyles.map((style) => ({
-  href: `/shop?style=${style.slug}`,
-  label: style.name,
-}));
+const footerShopLinks = [
+  { href: "/shop", label: "Shop all" },
+  { href: "/shop?gender=men", label: "Men" },
+  { href: "/shop?gender=women", label: "Women" },
+  { href: "/shop?gender=kids", label: "Kids" },
+  { href: "/#now-in-kaftans", label: "Now in: Kaftans" },
+];
 
 export function Footer() {
   return (
@@ -21,16 +22,14 @@ export function Footer() {
             </Link>
 
             <p className="max-w-sm text-xs leading-relaxed text-[color:var(--brand-charcoal)]/75">
-              {SITE_NAME} is a kaftan marketplace: our own house kaftans alongside approved independent tailors and boutiques from across Nigeria.
+              {SITE_NAME} is a fashion store for everyone: clothing and accessories from our own collection and from approved independent sellers across Nigeria.
             </p>
-
-            <p className="text-xs text-[color:var(--brand-charcoal)]/70">Demo storefront: products, sellers and orders are sample data.</p>
           </div>
 
           {/* Curated Categories */}
           <div className="space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[color:var(--brand-deep)]">
-              Kaftans by style
+              Shop
             </h3>
             <ul className="grid grid-cols-1 gap-2.5 text-xs text-[color:var(--brand-charcoal)]/75">
               {footerShopLinks.map((item) => (

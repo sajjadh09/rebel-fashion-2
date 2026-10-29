@@ -22,7 +22,7 @@ import { useStore } from "@/components/store-provider";
 import { createOrder } from "@/lib/api";
 import { writeJSON } from "@/lib/client-storage";
 import { SHIPPING_RATES } from "@/lib/config";
-import { formatPrice } from "@/lib/format";
+import { formatLineOptions, formatPrice } from "@/lib/format";
 
 const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa",
@@ -319,7 +319,7 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
-      // All order creation goes through the API layer: in demo mode it calls the
+      // All order creation goes through the API layer: in mock mode it calls the
       // mock payment route (/api/checkout); with a real backend it calls POST /orders.
       const { order, checkoutUrl } = await createOrder({
         customer: {
@@ -336,6 +336,7 @@ export default function CheckoutPage() {
           slug: item.slug,
           name: item.name,
           image: item.image,
+          type: item.type,
           color: item.color,
           size: item.size,
           quantity: item.quantity,
@@ -389,6 +390,7 @@ export default function CheckoutPage() {
           price: item.price,
           quantity: item.quantity,
           image: item.image,
+          type: item.type,
           color: item.color,
           size: item.size,
         })),
@@ -846,7 +848,7 @@ export default function CheckoutPage() {
                         {item.name}
                       </p>
                       <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/65">
-                        {item.color} / {item.size} · Qty {item.quantity}
+                        {formatLineOptions(item)} · Qty {item.quantity}
                       </p>
                     </div>
                     <p className="shrink-0 text-sm font-semibold text-[color:var(--brand-deep)]">

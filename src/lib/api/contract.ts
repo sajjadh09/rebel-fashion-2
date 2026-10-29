@@ -3,7 +3,6 @@ import type {
   AdminSession,
   CreateOrderInput,
   CreateOrderResult,
-  KaftanStyle,
   NewListingInput,
   Order,
   OrderStatus,
@@ -16,13 +15,13 @@ import type {
 } from "@/lib/types";
 
 /**
- * Every data operation the frontend needs. Both the mock (localStorage) and the
- * real HTTP implementation must provide exactly these functions.
+ * Every data operation the frontend needs. Every implementation (mock.ts,
+ * http.ts, and later e.g. supabase.ts) must provide exactly these functions,
+ * so swapping the data source never touches a component.
  * Each function maps to one REST endpoint documented in BACKEND.md.
  */
 export interface DataApi {
   // ── Catalogue (public) ──
-  getStyles(): Promise<KaftanStyle[]>;
   /** Approved products only. */
   getProducts(filters?: ProductFilters): Promise<Product[]>;
   /** Approved product by slug or id, or null. */

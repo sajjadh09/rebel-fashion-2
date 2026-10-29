@@ -7,7 +7,7 @@ import { PLATFORM_SELLER_ID } from "@/lib/config";
 import type { Product, ProductFilters } from "@/lib/types";
 
 /**
- * Grid of approved products from the API (platform kaftans + approved seller
+ * Grid of approved products from the API (platform products + approved seller
  * listings). `initial` is rendered on the server so the page is never empty.
  */
 export function ProductRail({

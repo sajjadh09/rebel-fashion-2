@@ -5,15 +5,10 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
+        // Homepage hero photo (restored from the original Rebel Fashion homepage).
         protocol: "https",
         hostname: "images.unsplash.com",
         pathname: "/**",
-      },
-      {
-        // Demo kaftan photos (free Pexels stock images, see src/lib/seed-data.ts)
-        protocol: "https",
-        hostname: "images.pexels.com",
-        pathname: "/photos/**",
       },
     ],
   },

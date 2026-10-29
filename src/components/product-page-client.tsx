@@ -33,7 +33,7 @@ export function ProductPageClient({ slug, initialProduct }: { slug: string; init
         href="/shop"
         className="mt-6 inline-flex rounded-full bg-[color:var(--brand-primary)] px-6 py-3 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)]"
       >
-        Browse kaftans
+        Browse the shop
       </Link>
     </div>
   );

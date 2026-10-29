@@ -12,7 +12,7 @@ import { useAsync } from "@/hooks/use-async";
 import { useSellerSession } from "@/hooks/use-session";
 import { getSellerListings, getSellerOrders, logoutSeller } from "@/lib/api";
 import { PLATFORM_COMMISSION_PERCENT } from "@/lib/config";
-import { formatDate, formatPrice, maskAccountNumber } from "@/lib/format";
+import { formatDate, formatLineOptions, formatPrice, maskAccountNumber } from "@/lib/format";
 
 type Tab = "listings" | "orders";
 
@@ -103,7 +103,7 @@ export default function SellerDashboardPage() {
           ) : (listings.data ?? []).length === 0 ? (
             <Card className="text-center">
               <PackageOpen className="mx-auto h-10 w-10 text-[color:var(--brand-primary)]" />
-              <h2 className="font-display mt-3 text-2xl text-[color:var(--brand-deep)]">Add your first kaftan</h2>
+              <h2 className="font-display mt-3 text-2xl text-[color:var(--brand-deep)]">Add your first product</h2>
               <p className="mx-auto mt-2 max-w-md text-sm text-[color:var(--brand-charcoal)]/70">
                 Upload photos, set your colours, sizes and price. Our team reviews each listing, usually within 24 hours.
               </p>
@@ -164,9 +164,9 @@ export default function SellerDashboardPage() {
                 </div>
                 <ul className="mt-4 divide-y divide-[color:var(--brand-border)] text-sm">
                   {order.items.map((item) => (
-                    <li key={`${item.productId}-${item.color}-${item.size}`} className="flex items-center justify-between gap-3 py-2">
+                    <li key={`${item.productId}-${item.type ?? ""}-${item.color}-${item.size}`} className="flex items-center justify-between gap-3 py-2">
                       <span className="min-w-0 truncate">
-                        {item.quantity} × {item.name} <span className="text-xs text-[color:var(--brand-charcoal)]/60">({item.color}, {item.size})</span>
+                        {item.quantity} × {item.name} <span className="text-xs text-[color:var(--brand-charcoal)]/60">({formatLineOptions(item)})</span>
                       </span>
                       <span className="shrink-0 font-semibold">{formatPrice(item.lineTotal)}</span>
                     </li>

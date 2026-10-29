@@ -7,7 +7,7 @@ import { useSyncExternalStore } from "react";
 import { Clock, MapPin, ShieldCheck } from "lucide-react";
 
 import { readJSON } from "@/lib/client-storage";
-import { formatPrice } from "@/lib/format";
+import { formatLineOptions, formatPrice } from "@/lib/format";
 
 type SavedOrder = {
   orderId: string;
@@ -26,6 +26,7 @@ type SavedOrder = {
     price: number;
     quantity: number;
     image: string;
+    type?: string;
     color: string;
     size: string;
   }>;
@@ -218,7 +219,7 @@ export default function CheckoutSuccessPage() {
                         {item.name}
                       </p>
                       <p className="text-[11px] text-[color:var(--brand-charcoal)]/65">
-                        {item.color} • {item.size} • Qty {item.quantity}
+                        {formatLineOptions(item)} • Qty {item.quantity}
                       </p>
                     </div>
                   </div>

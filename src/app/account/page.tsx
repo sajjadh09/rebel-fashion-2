@@ -40,7 +40,7 @@ export default function AccountPage() {
         </Link>
 
         <p className="mt-8 text-xs text-[color:var(--brand-charcoal)]/65">
-          Selling kaftans?{" "}
+          Selling clothes?{" "}
           <Link href="/seller/login" className="font-semibold text-[color:var(--brand-deep)] underline">Seller login</Link>
           {" · "}
           <Link href="/sell" className="font-semibold text-[color:var(--brand-deep)] underline">Open a store</Link>

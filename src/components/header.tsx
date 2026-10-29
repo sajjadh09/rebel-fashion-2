@@ -5,11 +5,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import {
-  ChevronDown,
   Heart,
   Menu,
   Search,
   ShoppingBag,
+  Store,
   User,
   X,
 } from "lucide-react";
@@ -17,17 +17,21 @@ import {
 import { useStore } from "@/components/store-provider";
 import AnimatedLogo from "@/components/animated-logo";
 import { SITE_NAME } from "@/lib/config";
-import { kaftanStyles } from "@/lib/seed-data";
 
-const categoryItems = kaftanStyles.map((style) => ({
-  href: `/shop?style=${style.slug}`,
-  label: style.name,
-}));
-
+/** Main navigation, in order. "Home" is first and "Admin" is always last. */
 const navItems = [
+  { href: "/", label: "Home" },
   { href: "/shop", label: "Shop" },
-  { href: `/sell`, label: `Sell on ${SITE_NAME}` },
+  { href: "/sell", label: `Sell on ${SITE_NAME}` },
+  { href: "/admin/login", label: "Admin" },
 ];
+
+function isActive(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  if (href === "/sell") return pathname === "/sell" || pathname.startsWith("/seller");
+  if (href === "/admin/login") return pathname.startsWith("/admin");
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function Header() {
   const pathname = usePathname();
@@ -35,7 +39,6 @@ export function Header() {
   const { itemCount, wishlist, openCart } = useStore();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [search, setSearch] = useState("");
 
   const onSearch = (event: FormEvent<HTMLFormElement>) => {
@@ -74,58 +77,10 @@ export function Header() {
             </Link>
           </div>
 
-          <nav className="hidden items-center gap-1 lg:flex">
-            <NavLink href="/shop" label="Shop" active={pathname === "/shop"} />
-
-            <div
-              className="relative"
-              onMouseLeave={() => setCategoriesOpen(false)}
-            >
-              <button
-                type="button"
-                onClick={() => setCategoriesOpen((value) => !value)}
-                onMouseEnter={() => setCategoriesOpen(true)}
-                aria-expanded={categoriesOpen}
-                className={`inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-wider ${
-                  pathname === "/styles"
-                    ? "bg-[color:var(--brand-primary)] text-[color:var(--brand-deep)]"
-                    : "text-[color:var(--brand-charcoal)]/80 hover:bg-[color:var(--brand-soft)]/60"
-                }`}
-              >
-                Kaftans by style
-                <ChevronDown
-                  className={`h-3.5 w-3.5 transition ${
-                    categoriesOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-
-              {categoriesOpen && (
-                <div className="absolute left-0 top-full z-50 w-64 pt-2">
-                  <div className="rounded-2xl border border-[color:var(--brand-border)] bg-white p-2 shadow-xl">
-                    {categoryItems.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setCategoriesOpen(false)}
-                        className="block rounded-xl px-3 py-2.5 text-xs font-semibold text-[color:var(--brand-charcoal)] hover:bg-[color:var(--brand-soft)]/50"
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
-                    <Link
-                      href="/styles"
-                      onClick={() => setCategoriesOpen(false)}
-                      className="mt-1 block rounded-xl border-t border-[color:var(--brand-border)] px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-deep)] hover:bg-[color:var(--brand-soft)]/50"
-                    >
-                      View all styles →
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <NavLink href="/sell" label={`Sell on ${SITE_NAME}`} active={pathname === "/sell" || pathname.startsWith("/seller")} />
+          <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
+            {navItems.map((item) => (
+              <NavLink key={item.href} href={item.href} label={item.label} active={isActive(pathname, item.href)} />
+            ))}
           </nav>
 
           <div className="hidden max-w-xs flex-1 justify-center md:flex">
@@ -139,7 +94,7 @@ export function Header() {
                   id="header-search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search kaftans..."
+                  placeholder="Search the shop..."
                   className="w-full min-w-0 bg-transparent text-xs outline-none"
                 />
               </div>
@@ -157,7 +112,7 @@ export function Header() {
 
             <Link
               href="/wishlist"
-              className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--brand-border)] bg-white text-[color:var(--brand-deep)]"
+              className="relative hidden h-10 w-10 items-center sm:inline-flex justify-center rounded-full border border-[color:var(--brand-border)] bg-white text-[color:var(--brand-deep)]"
               aria-label="Saved Items"
             >
               <Heart className="h-4 w-4" />
@@ -166,6 +121,15 @@ export function Header() {
                   {wishlist.length}
                 </span>
               )}
+            </Link>
+
+            <Link
+              href="/seller/signup"
+              className="inline-flex h-10 items-center gap-1.5 rounded-full border border-[color:var(--brand-deep)] bg-[color:var(--brand-deep)] px-3 text-[11px] font-bold uppercase tracking-wider text-white transition hover:bg-[color:var(--brand-chocolate)] sm:px-4"
+            >
+              <Store className="h-4 w-4 shrink-0" />
+              <span className="sm:hidden">Sell</span>
+              <span className="hidden sm:inline">Sell with us</span>
             </Link>
 
             <button
@@ -197,7 +161,7 @@ export function Header() {
                   id="mobile-search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search kaftans..."
+                  placeholder="Search the shop..."
                   className="w-full min-w-0 bg-transparent text-sm outline-none"
                 />
               </div>
@@ -215,26 +179,13 @@ export function Header() {
                 </Link>
               ))}
 
-              <div className="border-t border-[color:var(--brand-border)] pt-2">
-                <Link
-                  href="/styles"
-                  onClick={() => setMenuOpen(false)}
-                  className="block px-3 py-2 text-xs font-bold uppercase tracking-wider text-[color:var(--brand-primary)]"
-                >
-                  Kaftans by style
-                </Link>
-
-                {categoryItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMenuOpen(false)}
-                    className="block rounded-xl px-3 py-2.5 text-sm font-medium"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
+              <Link
+                href="/seller/signup"
+                onClick={() => setMenuOpen(false)}
+                className="mt-1 flex items-center justify-center gap-2 rounded-full bg-[color:var(--brand-deep)] px-4 py-3 text-xs font-bold uppercase tracking-wider text-white"
+              >
+                <Store className="h-4 w-4" /> Create seller account
+              </Link>
 
               <div className="flex items-center justify-between border-t border-[color:var(--brand-border)] px-3 pt-3 text-sm font-medium">
                 <button

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { LoginForm } from "@/components/login-form";
 import { loginSeller } from "@/lib/api";
-import { SITE_NAME, USE_MOCK_API } from "@/lib/config";
+import { SITE_NAME } from "@/lib/config";
 
 export default function SellerLoginPage() {
   const router = useRouter();
@@ -20,16 +20,9 @@ export default function SellerLoginPage() {
         router.push("/seller/dashboard");
       }}
       footer={
-        <>
-          <p>
-            New here? <Link href="/seller/signup" className="font-semibold text-[color:var(--brand-deep)] underline">Open a store</Link>
-          </p>
-          {USE_MOCK_API && (
-            <p className="mt-3 text-xs text-[color:var(--brand-charcoal)]/55">
-              Demo seller: arewa@rebelfashion.demo · Seller2026
-            </p>
-          )}
-        </>
+        <p>
+          New here? <Link href="/seller/signup" className="font-semibold text-[color:var(--brand-deep)] underline">Create a seller account</Link>
+        </p>
       }
     />
   );

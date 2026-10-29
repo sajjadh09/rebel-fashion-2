@@ -1,34 +1,36 @@
 
 # Rebel Fashion
 
-A multi-vendor **kaftan marketplace** frontend built with Next.js, TypeScript, and Tailwind CSS.
-Shoppers buy kaftans from Rebel Fashion and from approved independent sellers; sellers sign up and
-list products; an admin approves listings and manages orders. The platform keeps a commission
+A multi-vendor **fashion marketplace** frontend (all types of clothing and accessories) built with Next.js,
+TypeScript, and Tailwind CSS. The current collection is **kaftans** (30 products sold by Rebel Fashion itself).
+Shoppers buy from Rebel Fashion and from approved independent sellers; sellers sign up and list any clothing or
+accessory; an admin approves listings and manages orders. The platform keeps a commission
 (`PLATFORM_COMMISSION_PERCENT`, 10%) on every marketplace sale.
 
-> **Frontend only, demo data.** Everything runs on mock data stored in the browser until a backend is
-> connected. Backend developers: start with **[BACKEND.md](./BACKEND.md)**.
+> **Frontend only.** Until a backend is connected, data lives in a mock store in the browser
+> (no demo sellers or fake listings; sellers sign up through the form). The backend will be Supabase:
+> start with **[BACKEND.md](./BACKEND.md)**, section 8.
 
 ## Marketplace quick tour
 
 | Area | Routes |
 |------|--------|
-| Storefront | `/` (intro splash once per session), `/shop` (filters: gender, style, search, price), `/styles`, `/product/[slug]`, `/cart`, `/checkout`, `/checkout/success`, `/wishlist`, `/account` |
+| Storefront | `/` (intro splash once per session), `/shop` (filters: gender, search, price), `/product/[slug]` (choose Type, Colour, Size), `/cart`, `/checkout`, `/checkout/success`, `/wishlist`, `/account` |
 | Sellers | `/sell` (pitch), `/seller/signup`, `/seller/login`, `/seller/dashboard`, `/seller/listings/new` |
 | Admin | `/admin/login`, `/admin` (overview, pending listings, all products, sellers, orders) |
 | Mock API | `POST /api/checkout` (demo payment, needs `MOCK_PAYMENTS=true`) |
 
-Demo logins (mock mode only):
-- Admin: see `ADMIN_DEMO_CREDENTIALS` in `src/lib/config.ts` (not shown on the page).
-- Seller: `arewa@rebelfashion.demo` / `Seller2026` (also `luxe@…`, `marrakech@…`).
+Admin login in mock mode: `ADMIN_DEMO_CREDENTIALS` in `src/lib/config.ts` (never shown in the UI).
+Sellers create real accounts at `/seller/signup`.
 
 Key files:
 - `src/lib/config.ts` — `SITE_NAME`, `PLATFORM_COMMISSION_PERCENT`, shipping rates, env switches.
 - `src/lib/types.ts` — all domain types.
-- `src/lib/api/` — the only data layer (`index.ts` picks `mock.ts` or `http.ts`).
-- `src/lib/seed-data.ts` — demo kaftans, sellers and orders (one file to replace). Photos are free Pexels stock images.
+- `src/lib/api/` — the only data layer (`index.ts` picks `mock.ts`, `http.ts` or a future `supabase.ts` from `NEXT_PUBLIC_API_MODE`).
+- `src/lib/seed-data.ts` — the platform's 30 kaftans. Photos are in `public/products/` (generated product shots, no faces).
+- `npm run test:images` — tests for the photo upload/compression pipeline.
 
-Reset the demo data by clearing the site's localStorage (key `rf-mock-db`) or bumping `SEED_VERSION`.
+Reset the mock store by clearing the site's localStorage (key `rf-mock-db`) or bumping `SEED_VERSION`.
 
 ## About the Project
 
@@ -144,7 +146,7 @@ http://localhost:3000
 ## Backend Integration
 
 See **[BACKEND.md](./BACKEND.md)** for the full API contract (every endpoint, auth, uploads and Paystack split payments).
-Switch to a real backend with `NEXT_PUBLIC_USE_MOCK_API=false` and `NEXT_PUBLIC_API_BASE_URL=...` (see `.env.example`).
+Switch data source with `NEXT_PUBLIC_API_MODE=mock|http|supabase` (see `.env.example`; legacy `NEXT_PUBLIC_USE_MOCK_API=false` = `http`).
 
 The legacy mock checkout integration point is still available:
 

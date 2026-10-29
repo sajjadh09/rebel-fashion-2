@@ -2,7 +2,7 @@
  * MOCK implementation of the data API (default).
  *
  * Stores everything in the visitor's browser (localStorage) and starts from the
- * demo seed in src/lib/seed-data.ts. It behaves like a tiny backend so the whole
+ * platform's own catalogue in src/lib/seed-data.ts (no demo sellers or orders). It behaves like a tiny backend so the whole
  * marketplace can be clicked through without a server:
  *   seller signs up -> submits listing (pending) -> admin approves -> it shows in /shop.
  *
@@ -13,8 +13,8 @@ import { ADMIN_DEMO_CREDENTIALS, MOCK_API_DELAY_MS, PLATFORM_SELLER_ID, SHIPPING
 import { readJSON, writeJSON } from "@/lib/client-storage";
 import { buildSellerSplits, splitLine } from "@/lib/commission";
 import { slugify } from "@/lib/format";
-import { compressImageToDataUrl } from "@/lib/image-compress";
-import { demoSellers, kaftanStyles, SEED_VERSION, seedOrders, seedProducts } from "@/lib/seed-data";
+import { compressImageToDataUrl, shrinkDataUrl } from "@/lib/image-compress";
+import { SEED_VERSION, seedProducts } from "@/lib/seed-data";
 import type {
   AdminOverview,
   AdminSession,
@@ -54,11 +54,8 @@ function createSeedDb(): MockDb {
   return {
     version: SEED_VERSION,
     products: structuredClone(seedProducts),
-    sellers: demoSellers.map(({ demoPassword, ...seller }) => ({
-      ...seller,
-      passwordHash: weakHash(demoPassword),
-    })),
-    orders: structuredClone(seedOrders),
+    sellers: [],
+    orders: [],
     sellerSession: null,
     adminSession: null,
   };
@@ -78,6 +75,9 @@ function loadDb(): MockDb {
   return fresh;
 }
 
+const STORAGE_FULL_MESSAGE =
+  "There isn't enough space on this device to save these photos. Remove a photo or two (or use smaller ones) and try again.";
+
 function saveDb(db: MockDb) {
   if (typeof window === "undefined") {
     serverDb = db;
@@ -86,10 +86,8 @@ function saveDb(db: MockDb) {
   try {
     writeJSON(DB_KEY, db, "local", true);
   } catch {
-    throw new ApiError(
-      "Your browser storage is full (demo mode keeps photos in the browser). Use fewer or smaller photos and try again.",
-      507
-    );
+    // setItem only throws when storage is full (QuotaExceededError) or blocked (private mode).
+    throw new ApiError(STORAGE_FULL_MESSAGE, 507);
   }
 }
 
@@ -112,12 +110,11 @@ function matchesFilters(product: Product, filters: ProductFilters): boolean {
   if (filters.gender && filters.gender !== "all") {
     if (product.gender !== filters.gender && product.gender !== "unisex") return false;
   }
-  if (filters.style && product.style !== filters.style) return false;
   if (filters.sellerId && product.sellerId !== filters.sellerId) return false;
   if (filters.ids && !filters.ids.includes(product.id)) return false;
   if (filters.search) {
     const term = filters.search.trim().toLowerCase();
-    const haystack = [product.name, product.description, product.style, product.material, product.sellerName, ...product.colors.map((c) => c.name)]
+    const haystack = [product.name, product.description, product.productType, product.material, product.sellerName, ...product.colors.map((c) => c.name)]
       .join(" ")
       .toLowerCase();
     if (!haystack.includes(term)) return false;
@@ -156,10 +153,6 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const mockApi: DataApi = {
   // ───────────── Catalogue ─────────────
-  async getStyles() {
-    return delay(kaftanStyles);
-  },
-
   async getProducts(filters = {}) {
     const db = loadDb();
     const products = db.products.filter((product) => product.status === "approved" && matchesFilters(product, filters));
@@ -249,7 +242,8 @@ export const mockApi: DataApi = {
     if (!input.name.trim()) throw new ApiError("Please add a title.");
     if (input.images.length === 0) throw new ApiError("Please add at least one photo.");
     if (!(input.price > 0)) throw new ApiError("Please enter a price.");
-    if (input.sizes.length === 0) throw new ApiError("Please choose at least one size.");
+    if (!input.productType.trim()) throw new ApiError("Please enter a product type, e.g. Shirt, Dress or Bag.");
+    if (input.sizes.length === 0) throw new ApiError("Please add at least one size.");
     if (input.colors.length === 0) throw new ApiError("Please add at least one colour.");
 
     const now = new Date().toISOString();
@@ -259,9 +253,12 @@ export const mockApi: DataApi = {
       slug,
       name: input.name.trim(),
       description: input.description.trim(),
-      category: input.category,
-      style: input.style,
-      gender: input.gender,
+      productType: input.productType.trim(),
+      gender: input.gender ?? "unisex",
+      typeOption:
+        input.typeOption && input.typeOption.values.length > 0
+          ? { label: input.typeOption.label.trim() || "Type", values: input.typeOption.values }
+          : null,
       price: Math.round(input.price),
       images: input.images,
       colors: input.colors,
@@ -278,12 +275,23 @@ export const mockApi: DataApi = {
     };
 
     db.products.push(product);
-    saveDb(db);
+    try {
+      saveDb(db);
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 507) throw error;
+      // Browser storage is nearly full: shrink this listing's photos once and retry.
+      const shrink = (url: string) => shrinkDataUrl(url, 800, 0.7).catch(() => url);
+      product.images = await Promise.all(product.images.map(shrink));
+      product.colors = await Promise.all(
+        product.colors.map(async (color) => (color.image ? { ...color, image: await shrink(color.image) } : color))
+      );
+      saveDb(db); // throws the friendly "not enough space" error if it still doesn't fit
+    }
     return delay(product);
   },
 
   async uploadListingImage(file) {
-    // In mock mode photos are compressed and kept as data URLs in localStorage.
+    // In mock mode photos are compressed (max 1200px JPEG) and kept as data URLs in localStorage.
     return compressImageToDataUrl(file);
   },
 
@@ -469,6 +477,7 @@ export const mockApi: DataApi = {
         slug: product.slug,
         name: product.name,
         image: line.image || product.images[0],
+        type: line.type ?? "",
         color: line.color,
         size: line.size,
         quantity,

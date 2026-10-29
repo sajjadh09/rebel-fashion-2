@@ -1,844 +1,1237 @@
 /**
- * DEMO SEED DATA — the only file to edit (or delete) when real products arrive.
+ * STARTER CATALOGUE — the products the platform itself sells (Sold by Rebel Fashion).
  *
- * Everything here is sample content for the frontend prototype:
- *  - kaftan styles, the platform's own kaftans and a few demo marketplace sellers
- *  - photos are free stock images from Pexels (https://www.pexels.com/license/)
- *  - when a colour has no photo of its own, it reuses the style's photo; the
- *    ColorVariant entry is still there, so a real colour photo can be dropped in
- *    by filling its `image` field.
+ * Rebel Fashion sells all kinds of clothing; the current collection is 30 modern
+ * kaftans. There are no demo sellers, demo orders or fake listings: marketplace
+ * sellers sign up through /seller/signup and their listings go through admin review.
  *
- * The mock API (src/lib/api/mock.ts) copies this data into the browser's
+ * Photos live in /public/products (generated product shots: flat lays, hangers and
+ * headless mannequins). A colour without its own `image` shows the main photo, and
+ * the swatch shows the colour. Drop a real colour photo in by filling `image`.
+ *
+ * The mock API (src/lib/api/mock.ts) copies this catalogue into the browser's
  * localStorage on first visit. Bump SEED_VERSION after editing so browsers reload it.
+ * With a real backend, import these rows into the products table once (see BACKEND.md).
  */
 
 import { PLATFORM_SELLER_ID, SITE_NAME } from "@/lib/config";
-import type { KaftanStyle, Order, Product, Seller } from "@/lib/types";
+import type { Product } from "@/lib/types";
 
-export const SEED_VERSION = 3;
-
-/** Builds a Pexels CDN URL for a photo id. */
-export function pexels(id: number, width = 1200): string {
-  return `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=${width}`;
-}
-
-export const announcement =
-  "Handpicked kaftans from Nigerian tailors • Secure checkout • Sellers paid directly";
-
-export const HERO_IMAGES = {
-  main: pexels(36690235, 1400),
-  secondary: pexels(30457747, 1000),
-  tertiary: pexels(31485660, 1000),
-  sell: pexels(37283126, 1200),
-  men: pexels(35013624, 1000),
-  women: pexels(33846700, 1000),
-  kids: pexels(16175749, 1000),
-};
-
-export const kaftanStyles: KaftanStyle[] = [
-  {
-    slug: "agbada",
-    name: "Agbada-Style",
-    description: "Flowing three-piece grand robes with embroidered necklines for weddings and big days.",
-    image: pexels(31485660, 900),
-    gender: "men",
-  },
-  {
-    slug: "senator",
-    name: "Senator",
-    description: "Sharp two-piece native sets: tailored kaftan top and matching trousers.",
-    image: pexels(34275056, 900),
-    gender: "men",
-  },
-  {
-    slug: "jalabiya",
-    name: "Jalabiya & Thobe",
-    description: "Clean, ankle-length robes for Jumu'ah, Eid and everyday ease.",
-    image: pexels(7129747, 900),
-    gender: "men",
-  },
-  {
-    slug: "embroidered",
-    name: "Embroidered Kaftans",
-    description: "Hand-finished thread work, beading and statement necklines.",
-    image: pexels(18930960, 900),
-    gender: "unisex",
-  },
-  {
-    slug: "moroccan",
-    name: "Moroccan Caftan",
-    description: "Takchita-inspired silhouettes, belts and rich trims from the Maghreb tradition.",
-    image: pexels(30457746, 900),
-    gender: "women",
-  },
-  {
-    slug: "abaya-kaftan",
-    name: "Abaya-Kaftan",
-    description: "Modest, open or closed abaya-kaftans in soft crepe and nidha.",
-    image: pexels(29188564, 900),
-    gender: "women",
-  },
-  {
-    slug: "modern",
-    name: "Modern & Resort",
-    description: "Minimal cuts and relaxed resort kaftans for the weekend.",
-    image: pexels(38188490, 900),
-    gender: "unisex",
-  },
-  {
-    slug: "kids",
-    name: "Kids' Kaftans",
-    description: "Festive mini kaftans for naming ceremonies, Eid and family photos.",
-    image: pexels(16175749, 900),
-    gender: "kids",
-  },
-];
+export const SEED_VERSION = 4;
 
 const MEN_SIZES = ["S", "M", "L", "XL", "XXL", "3XL"];
 const WOMEN_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
+const UNI_SIZES = ["S", "M", "L", "XL", "XXL"];
 const KIDS_SIZES = ["2-3Y", "4-5Y", "6-7Y", "8-9Y", "10-12Y"];
-const CREATED = "2026-10-01T09:00:00.000Z";
 
-type SeedProductInput = Omit<Product, "slug" | "status" | "createdAt" | "sellerId" | "sellerName" | "isDemo"> & {
-  sellerId?: string;
-  status?: Product["status"];
-  createdAt?: string;
-};
-
-export const demoSellers: (Seller & { demoPassword: string })[] = [
-  {
-    id: "sel_arewa",
-    businessName: "Arewa Threads",
-    ownerName: "Musa Abdullahi",
-    email: "arewa@rebelfashion.demo",
-    phone: "08030000001",
-    bank: { bankName: "Guaranty Trust Bank", accountNumber: "0123456789", accountName: "Arewa Threads Ventures" },
-    paystackSubaccountCode: "ACCT_demo_arewa",
-    status: "active",
-    createdAt: "2026-09-12T10:00:00.000Z",
-    demoPassword: "Seller2026",
-  },
-  {
-    id: "sel_lagosluxe",
-    businessName: "Lagos Luxe Kaftans",
-    ownerName: "Adaeze Okafor",
-    email: "luxe@rebelfashion.demo",
-    phone: "08030000002",
-    bank: { bankName: "Access Bank", accountNumber: "0987654321", accountName: "Lagos Luxe Kaftans Ltd" },
-    paystackSubaccountCode: "ACCT_demo_luxe",
-    status: "active",
-    createdAt: "2026-09-18T10:00:00.000Z",
-    demoPassword: "Seller2026",
-  },
-  {
-    id: "sel_marrakech",
-    businessName: "Marrakech House NG",
-    ownerName: "Fatima Bello",
-    email: "marrakech@rebelfashion.demo",
-    phone: "08030000003",
-    bank: { bankName: "Zenith Bank", accountNumber: "1122334455", accountName: "Marrakech House Nigeria" },
-    paystackSubaccountCode: "ACCT_demo_marrakech",
-    status: "active",
-    createdAt: "2026-09-25T10:00:00.000Z",
-    demoPassword: "Seller2026",
-  },
-];
-
-function sellerName(id: string): string {
-  if (id === PLATFORM_SELLER_ID) return SITE_NAME;
-  return demoSellers.find((seller) => seller.id === id)?.businessName ?? "Independent seller";
+/** Stable "listed on" dates so the server and browser render the same order. */
+function day(index: number): string {
+  return new Date(Date.UTC(2026, 9, 1, 9) + index * 3600_000).toISOString();
 }
 
-function product(input: SeedProductInput): Product {
-  const sellerId = input.sellerId ?? PLATFORM_SELLER_ID;
+type CatalogueInput = Omit<Product, "slug" | "status" | "sellerId" | "sellerName">;
+
+function product(input: CatalogueInput): Product {
   return {
     ...input,
     slug: input.id,
-    sellerId,
-    sellerName: sellerName(sellerId),
-    status: input.status ?? "approved",
-    createdAt: input.createdAt ?? CREATED,
-    isDemo: true,
+    sellerId: PLATFORM_SELLER_ID,
+    sellerName: SITE_NAME,
+    status: "approved",
   };
 }
 
 export const seedProducts: Product[] = [
-  // ───────────── MEN ─────────────
   product({
-    id: "royal-three-piece-agbada",
-    name: "Royal Three-Piece Agbada",
-    description:
-      "A ceremonial grand robe with a matching inner kaftan and trousers. Dense chest embroidery and a generous drape that moves beautifully on the dance floor.",
-    category: "agbada",
-    style: "agbada",
-    gender: "men",
-    price: 185000,
-    compareAtPrice: 210000,
-    badge: "Wedding Edit",
-    featured: true,
-    images: [pexels(31485660), pexels(31485658)],
-    colors: [
-      { name: "Royal Wine", hex: "#6E1E2A", image: pexels(31485660), images: [pexels(31485660), pexels(31485658)] },
-      { name: "Sky Blue", hex: "#8DB5DE", image: pexels(8526759), images: [pexels(8526759), pexels(8526816), pexels(8526818)] },
-      { name: "Ivory", hex: "#F3EEE2" },
+    "id": "classic-white-cotton-kaftan",
+    "name": "Classic White Cotton Kaftan",
+    "description": "A clean, everyday kaftan in crisp white cotton with a short button placket and side slits. Wear it alone or as the matching set with plain trousers.",
+    "productType": "Kaftan",
+    "gender": "men",
+    "price": 38000,
+    "badge": "Bestseller",
+    "featured": true,
+    "typeOption": {
+      "label": "Set",
+      "values": [
+        "Top only",
+        "Top + trousers"
+      ]
+    },
+    "images": [
+      "/products/classic-white-cotton-kaftan.webp"
     ],
-    sizes: MEN_SIZES,
-    stock: 14,
-    material: "Cashmere-blend brocade with cotton lining",
-    fit: "Free-flowing outer robe, regular-fit inner kaftan",
-    care: "Dry clean only. Steam to refresh.",
-  }),
-  product({
-    id: "midnight-embroidered-agbada",
-    name: "Midnight Embroidered Agbada",
-    description:
-      "Deep navy agbada with gold-and-ivory scroll embroidery from collar to hem. Comes with a matching fila.",
-    category: "agbada",
-    style: "agbada",
-    gender: "men",
-    price: 165000,
-    badge: "Bestseller",
-    featured: true,
-    images: [pexels(38141341)],
-    colors: [
-      { name: "Midnight Navy", hex: "#1D2840", image: pexels(38141341) },
-      { name: "Jet Black", hex: "#141414" },
-      { name: "Olive", hex: "#5B5E3A" },
-    ],
-    sizes: MEN_SIZES,
-    stock: 10,
-    material: "Premium Swiss voile with machine embroidery",
-    fit: "Relaxed grand robe",
-    care: "Dry clean recommended.",
-  }),
-  product({
-    id: "aso-oke-striped-agbada",
-    name: "Aso-Oke Striped Agbada",
-    description:
-      "Hand-woven aso-oke stripes in a statement agbada silhouette. A heritage piece for chieftaincy events and family celebrations.",
-    category: "agbada",
-    style: "agbada",
-    gender: "men",
-    price: 240000,
-    badge: "Handwoven",
-    featured: true,
-    sellerId: "sel_arewa",
-    images: [pexels(36690235)],
-    colors: [
-      { name: "Emerald Stripe", hex: "#1F5A45", image: pexels(36690235) },
-      { name: "Cocoa Stripe", hex: "#5A3B28", image: pexels(37283126) },
-      { name: "Ivory Stripe", hex: "#E9E1D2", image: pexels(35013624), images: [pexels(35013624), pexels(35013625)] },
-    ],
-    sizes: MEN_SIZES,
-    stock: 6,
-    material: "Hand-woven aso-oke, cotton inner set",
-    fit: "Voluminous traditional cut",
-    care: "Dry clean only. Store folded.",
-  }),
-  product({
-    id: "classic-senator-set",
-    name: "Classic Senator Set",
-    description:
-      "The everyday native essential: a crisp mandarin-collar kaftan top with tonal stitch detail and tapered trousers.",
-    category: "kaftan",
-    style: "senator",
-    gender: "men",
-    price: 48000,
-    compareAtPrice: 55000,
-    badge: "Core",
-    featured: true,
-    images: [pexels(34275056)],
-    colors: [
-      { name: "Mustard", hex: "#C9A227", image: pexels(34275056) },
-      { name: "Stone", hex: "#D9CBB5", image: pexels(34362606) },
-      { name: "Plum Wine", hex: "#7A2E45", image: pexels(34446752) },
-      { name: "Charcoal", hex: "#3A3A3A" },
-    ],
-    sizes: MEN_SIZES,
-    stock: 40,
-    material: "Senator wool-blend suiting",
-    fit: "Tailored regular fit",
-    care: "Machine wash cold, iron on medium.",
-  }),
-  product({
-    id: "white-senator-kaftan-trouser",
-    name: "White Senator Kaftan & Trouser",
-    description: "Clean white two-piece with a long-line top and side slits. Sharp for Jumu'ah, weddings and naming ceremonies.",
-    category: "kaftan",
-    style: "senator",
-    gender: "men",
-    price: 42000,
-    images: [pexels(32939462)],
-    colors: [
-      { name: "Optic White", hex: "#FAFAF7", image: pexels(32939462) },
-      { name: "Navy", hex: "#1E2A44" },
-      { name: "Black", hex: "#151515" },
-    ],
-    sizes: MEN_SIZES,
-    stock: 32,
-    material: "Cotton-rich senator fabric",
-    fit: "Long-line regular fit",
-    care: "Machine wash 30°C.",
-  }),
-  product({
-    id: "hausa-babban-riga",
-    name: "Hausa Babban Riga with Cap",
-    description:
-      "A northern classic: layered babban riga with chest embroidery, worn with a matching embroidered zanna cap.",
-    category: "agbada",
-    style: "embroidered",
-    gender: "men",
-    price: 135000,
-    badge: "Northern Classic",
-    featured: true,
-    sellerId: "sel_arewa",
-    images: [pexels(35357616)],
-    colors: [
-      { name: "Ivory White", hex: "#F1EEE6", image: pexels(35357616) },
-      { name: "Graphite", hex: "#55585C", image: pexels(34821103) },
-    ],
-    sizes: MEN_SIZES,
-    stock: 9,
-    material: "Brocade with hand-guided embroidery",
-    fit: "Traditional wide cut",
-    care: "Dry clean only.",
-  }),
-  product({
-    id: "minimal-long-kaftan",
-    name: "Minimal Long Kaftan",
-    description: "A pared-back ankle-length kaftan with a hidden placket. Modern, quiet and easy to dress up or down.",
-    category: "kaftan",
-    style: "modern",
-    gender: "men",
-    price: 39000,
-    featured: true,
-    images: [pexels(38188490), pexels(38188493)],
-    colors: [
-      { name: "Brick Red", hex: "#8A3B2E", image: pexels(38188490), images: [pexels(38188490), pexels(38188493)] },
-      { name: "Plum", hex: "#5E1F33", image: pexels(37766348) },
-      { name: "Sand", hex: "#CDB892" },
-    ],
-    sizes: MEN_SIZES,
-    stock: 25,
-    material: "Brushed cotton twill",
-    fit: "Straight relaxed fit",
-    care: "Machine wash cold.",
-  }),
-  product({
-    id: "moroccan-embroidered-djellaba",
-    name: "Moroccan Embroidered Djellaba",
-    description: "Men's Moroccan-inspired djellaba with gold soutache embroidery down the front and on the cuffs.",
-    category: "jalabiya",
-    style: "moroccan",
-    gender: "men",
-    price: 72000,
-    images: [pexels(38257670)],
-    colors: [
-      { name: "Burgundy & Gold", hex: "#6B2232", image: pexels(38257670) },
-      { name: "Bottle Green", hex: "#1F4A3A" },
-    ],
-    sizes: MEN_SIZES,
-    stock: 12,
-    material: "Velvet-touch crepe with soutache trim",
-    fit: "Relaxed full length",
-    care: "Dry clean recommended.",
-  }),
-  product({
-    id: "emirati-kandura",
-    name: "Emirati Kandura",
-    description: "A crisp Gulf-style kandura with a collarless neckline and a long tassel. Light, breathable and elegant.",
-    category: "jalabiya",
-    style: "jalabiya",
-    gender: "men",
-    price: 45000,
-    images: [pexels(5416866)],
-    colors: [
-      { name: "Pure White", hex: "#FFFFFF", image: pexels(5416866) },
-      { name: "Earth Brown", hex: "#5C4033", image: pexels(33853481) },
-    ],
-    sizes: MEN_SIZES,
-    stock: 30,
-    material: "Japanese poly-viscose",
-    fit: "Straight full length",
-    care: "Machine wash 30°C.",
-  }),
-  product({
-    id: "classic-white-jalabiya",
-    name: "Classic Jalabiya (Thobe)",
-    description: "The everyday jalabiya: round neck, short placket and side pockets. Cool cotton for Nigerian heat.",
-    category: "jalabiya",
-    style: "jalabiya",
-    gender: "men",
-    price: 28000,
-    compareAtPrice: 32000,
-    badge: "Eid Ready",
-    featured: true,
-    images: [pexels(7129747), pexels(7129611), pexels(7129746)],
-    colors: [
-      { name: "White", hex: "#FBFBF8", image: pexels(7129747), images: [pexels(7129747), pexels(7129611), pexels(7129746)] },
-      { name: "Sand", hex: "#D8C7A8" },
-      { name: "Grey", hex: "#9EA2A6" },
-    ],
-    sizes: MEN_SIZES,
-    stock: 60,
-    material: "100% breathable cotton",
-    fit: "Regular full length",
-    care: "Machine wash warm.",
-  }),
-  product({
-    id: "kano-indigo-kaftan-set",
-    name: "Kano Indigo Kaftan Set",
-    description: "Indigo-dyed kaftan, trousers and a striped overlay, inspired by the dye pits of Kofar Mata.",
-    category: "kaftan",
-    style: "senator",
-    gender: "men",
-    price: 88000,
-    sellerId: "sel_arewa",
-    status: "pending",
-    createdAt: "2026-10-27T12:30:00.000Z",
-    images: [pexels(37320669)],
-    colors: [
-      { name: "Indigo & Violet", hex: "#3B2F7A", image: pexels(37320669) },
-      { name: "Deep Indigo", hex: "#22305A" },
-    ],
-    sizes: MEN_SIZES,
-    stock: 8,
-    material: "Hand-dyed cotton",
-    fit: "Relaxed",
-    care: "Hand wash cold separately.",
-  }),
-
-  // ───────────── WOMEN ─────────────
-  product({
-    id: "moroccan-takchita-caftan",
-    name: "Moroccan Takchita Caftan",
-    description:
-      "A two-layer takchita with geometric embroidered panels and a jewelled belt. Made for henna nights, weddings and Eid.",
-    category: "kaftan",
-    style: "moroccan",
-    gender: "women",
-    price: 158000,
-    compareAtPrice: 180000,
-    badge: "Editor's Pick",
-    featured: true,
-    images: [pexels(30457746), pexels(30457747), pexels(30457750), pexels(30457755)],
-    colors: [
+    "colors": [
       {
-        name: "Ivory Mosaic",
-        hex: "#EFE7EE",
-        image: pexels(30457746),
-        images: [pexels(30457746), pexels(30457747), pexels(30457750), pexels(30457755), pexels(30457749)],
+        "name": "White",
+        "hex": "#F7F5F0",
+        "image": "/products/classic-white-cotton-kaftan.webp"
       },
-      { name: "Lilac", hex: "#9C8FE0", image: pexels(30457743) },
-      { name: "Rose Gold", hex: "#C98F7E" },
+      {
+        "name": "Sky Blue",
+        "hex": "#8DB5DE"
+      },
+      {
+        "name": "Black",
+        "hex": "#1E1E1E"
+      }
     ],
-    sizes: WOMEN_SIZES,
-    stock: 7,
-    material: "Satin crepe with hand-set embroidery and beaded belt",
-    fit: "Fitted bodice, flowing skirt",
-    care: "Dry clean only.",
+    "sizes": MEN_SIZES,
+    "stock": 24,
+    "material": "Breathable cotton poplin",
+    "fit": "Relaxed straight cut, knee length, side slits",
+    "care": "Machine wash cold, iron on medium",
+    "createdAt": day(0)
   }),
   product({
-    id: "velvet-bridal-caftan",
-    name: "Velvet Bridal Caftan",
-    description: "Emerald velvet caftan with full gold-thread embroidery and a sheer embroidered veil.",
-    category: "kaftan",
-    style: "embroidered",
-    gender: "women",
-    price: 260000,
-    badge: "Bridal",
-    featured: true,
-    images: [pexels(18930960)],
-    colors: [
-      { name: "Emerald", hex: "#14463F", image: pexels(18930960) },
-      { name: "Wine", hex: "#5A1426" },
-      { name: "Midnight", hex: "#1A1F33" },
+    "id": "charcoal-linen-kaftan",
+    "name": "Charcoal Linen Kaftan",
+    "description": "A soft washed-linen kaftan with a neat band collar and long sleeves. Light enough for Abuja afternoons, smart enough for evening plans.",
+    "productType": "Kaftan",
+    "gender": "men",
+    "price": 42000,
+    "featured": true,
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Short",
+        "Long"
+      ]
+    },
+    "images": [
+      "/products/charcoal-linen-kaftan.webp"
     ],
-    sizes: WOMEN_SIZES,
-    stock: 4,
-    material: "Silk velvet with metallic embroidery",
-    fit: "Fitted bodice, A-line skirt",
-    care: "Specialist dry clean.",
+    "colors": [
+      {
+        "name": "Charcoal",
+        "hex": "#4A4A4A",
+        "image": "/products/charcoal-linen-kaftan.webp"
+      },
+      {
+        "name": "Stone",
+        "hex": "#CFC6B5"
+      },
+      {
+        "name": "Navy",
+        "hex": "#1F2A44"
+      }
+    ],
+    "sizes": MEN_SIZES,
+    "stock": 18,
+    "material": "100% washed linen",
+    "fit": "Regular fit with band collar",
+    "care": "Machine wash cold, line dry",
+    "createdAt": day(1)
   }),
   product({
-    id: "silk-belted-kaftan",
-    name: "Silk Belted Kaftan",
-    description: "A liquid satin kaftan with bell sleeves, contrast lining and a gold filigree belt.",
-    category: "kaftan",
-    style: "moroccan",
-    gender: "women",
-    price: 98000,
-    featured: true,
-    sellerId: "sel_marrakech",
-    images: [pexels(33846700)],
-    colors: [
-      { name: "Silver", hex: "#BFC3C7", image: pexels(33846700) },
-      { name: "Sage Silver", hex: "#A9B3A2", image: pexels(33846702) },
+    "id": "sand-everyday-jalabiya",
+    "name": "Sand Everyday Jalabiya",
+    "description": "An easy ankle-length jalabiya in a warm sand tone. Collarless neck, long sleeves and a relaxed cut for Jumu'ah or everyday wear.",
+    "productType": "Jalabiya",
+    "gender": "men",
+    "price": 35000,
+    "featured": true,
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Regular",
+        "Tall"
+      ]
+    },
+    "images": [
+      "/products/sand-everyday-jalabiya.webp"
     ],
-    sizes: WOMEN_SIZES,
-    stock: 11,
-    material: "Duchess satin with metal belt",
-    fit: "Relaxed with belted waist",
-    care: "Dry clean only.",
+    "colors": [
+      {
+        "name": "Sand",
+        "hex": "#D6BC94",
+        "image": "/products/sand-everyday-jalabiya.webp"
+      },
+      {
+        "name": "White",
+        "hex": "#F7F5F0"
+      },
+      {
+        "name": "Grey",
+        "hex": "#A6A6A6"
+      }
+    ],
+    "sizes": MEN_SIZES,
+    "stock": 30,
+    "material": "Cotton-poly blend",
+    "fit": "Loose ankle-length cut",
+    "care": "Machine wash 30°C, low iron",
+    "createdAt": day(2)
   }),
   product({
-    id: "ruby-gold-kaftan",
-    name: "Ruby & Gold Kaftan",
-    description: "A show-stopping butterfly kaftan with gold beadwork across the yoke. Free-flowing and flattering.",
-    category: "kaftan",
-    style: "embroidered",
-    gender: "women",
-    price: 76000,
-    badge: "Trending",
-    featured: true,
-    sellerId: "sel_lagosluxe",
-    images: [pexels(7249704)],
-    colors: [
-      { name: "Ruby", hex: "#B3122C", image: pexels(7249704) },
-      { name: "Coral Print", hex: "#D9533F", image: pexels(34363124) },
+    "id": "navy-collared-thobe",
+    "name": "Navy Collared Thobe",
+    "description": "A sharp thobe with a shirt collar and full button placket in deep navy. Clean lines, no fuss.",
+    "productType": "Thobe",
+    "gender": "men",
+    "price": 39000,
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Regular",
+        "Tall"
+      ]
+    },
+    "images": [
+      "/products/navy-collared-thobe.webp"
     ],
-    sizes: ["Free size", "Plus size"],
-    stock: 18,
-    material: "Chiffon-crepe with hand beading",
-    fit: "Free-flowing butterfly cut",
-    care: "Hand wash cold or dry clean.",
+    "colors": [
+      {
+        "name": "Navy",
+        "hex": "#1F2A44",
+        "image": "/products/navy-collared-thobe.webp"
+      },
+      {
+        "name": "Brown",
+        "hex": "#5A3A22"
+      },
+      {
+        "name": "White",
+        "hex": "#F7F5F0"
+      }
+    ],
+    "sizes": MEN_SIZES,
+    "stock": 20,
+    "material": "Fine cotton twill",
+    "fit": "Tailored ankle-length thobe with shirt collar",
+    "care": "Machine wash cold, iron inside out",
+    "createdAt": day(3)
   }),
   product({
-    id: "open-front-abaya-kaftan",
-    name: "Open-Front Abaya-Kaftan",
-    description: "A soft open abaya-kaftan with dropped shoulders, worn over a slip dress or wide-leg trousers.",
-    category: "abaya",
-    style: "abaya-kaftan",
-    gender: "women",
-    price: 54000,
-    featured: true,
-    images: [pexels(13791545), pexels(13791549)],
-    colors: [
-      { name: "Taupe", hex: "#A99A88", image: pexels(13791545), images: [pexels(13791545), pexels(13791549)] },
-      { name: "Camel", hex: "#C2A07E", image: pexels(29188564) },
-      { name: "Sage", hex: "#9DB1A0", image: pexels(29188568) },
-      { name: "Mint Grey", hex: "#A6B8AE", image: pexels(29273204) },
+    "id": "olive-short-kaftan-shirt",
+    "name": "Olive Short Kaftan Shirt",
+    "description": "A hip-length kaftan shirt with a mandarin collar, cut for warm days and casual weekends. Pairs with jeans or chinos.",
+    "productType": "Kaftan shirt",
+    "gender": "men",
+    "price": 24000,
+    "badge": "New",
+    "typeOption": {
+      "label": "Sleeve",
+      "values": [
+        "Short",
+        "Long"
+      ]
+    },
+    "images": [
+      "/products/olive-short-kaftan-shirt.webp"
     ],
-    sizes: WOMEN_SIZES,
-    stock: 26,
-    material: "Nidha crepe",
-    fit: "Relaxed open front",
-    care: "Machine wash cold, gentle.",
+    "colors": [
+      {
+        "name": "Olive",
+        "hex": "#5C6B3A",
+        "image": "/products/olive-short-kaftan-shirt.webp"
+      },
+      {
+        "name": "Sand",
+        "hex": "#D6BC94"
+      },
+      {
+        "name": "Black",
+        "hex": "#1E1E1E"
+      }
+    ],
+    "sizes": MEN_SIZES,
+    "stock": 35,
+    "material": "Textured cotton",
+    "fit": "Hip-length, relaxed",
+    "care": "Machine wash cold",
+    "createdAt": day(4)
   }),
   product({
-    id: "embroidered-abaya-kaftan",
-    name: "Embroidered Abaya-Kaftan",
-    description: "A closed abaya-kaftan with gold or tonal embroidery down the front panel and the cuffs.",
-    category: "abaya",
-    style: "abaya-kaftan",
-    gender: "women",
-    price: 68000,
-    badge: "New",
-    sellerId: "sel_lagosluxe",
-    images: [pexels(37368651)],
-    colors: [
-      { name: "Black & Gold", hex: "#16130F", image: pexels(37368651) },
-      { name: "Black Lace Trim", hex: "#1C1C1C", image: pexels(32688173) },
-      { name: "Charcoal", hex: "#3B3D42", image: pexels(32208656) },
-      { name: "Jet Pleated", hex: "#0E0E0E", image: pexels(13838842) },
+    "id": "ivory-moroccan-linen-caftan",
+    "name": "Ivory Moroccan Linen Caftan",
+    "description": "A Moroccan-inspired caftan in soft ivory linen with a V-neck and a long row of fabric-covered buttons. Light, airy and easy to dress up.",
+    "productType": "Moroccan caftan",
+    "gender": "women",
+    "price": 52000,
+    "compareAtPrice": 58000,
+    "featured": true,
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Midi",
+        "Maxi"
+      ]
+    },
+    "images": [
+      "/products/ivory-moroccan-linen-caftan.webp"
     ],
-    sizes: WOMEN_SIZES,
-    stock: 15,
-    material: "Premium crepe with embroidery",
-    fit: "Relaxed A-line",
-    care: "Hand wash cold.",
+    "colors": [
+      {
+        "name": "Ivory",
+        "hex": "#F2ECDF",
+        "image": "/products/ivory-moroccan-linen-caftan.webp"
+      },
+      {
+        "name": "Blush",
+        "hex": "#F2C9C4"
+      },
+      {
+        "name": "Sage",
+        "hex": "#9CAF94"
+      }
+    ],
+    "sizes": WOMEN_SIZES,
+    "stock": 14,
+    "material": "Linen-viscose blend",
+    "fit": "Flowing A-line with wide sleeves",
+    "care": "Hand wash or gentle cycle, cool iron",
+    "createdAt": day(5)
   }),
   product({
-    id: "ivory-lace-kaftan",
-    name: "Ivory Lace Kaftan",
-    description: "An all-ivory kaftan with lace sleeves and a matching scarf — made for nikkah and naming ceremonies.",
-    category: "abaya",
-    style: "abaya-kaftan",
-    gender: "women",
-    price: 82000,
-    images: [pexels(31049717)],
-    colors: [
-      { name: "Ivory", hex: "#F6F3EA", image: pexels(31049717) },
-      { name: "Champagne", hex: "#E6D3B3" },
+    "id": "terracotta-caftan-dress",
+    "name": "Terracotta Caftan Dress",
+    "description": "A rich terracotta caftan dress with wide bell sleeves and a simple round neck. One-piece easy dressing in a warm earthy colour.",
+    "productType": "Moroccan caftan",
+    "gender": "women",
+    "price": 48000,
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Midi",
+        "Maxi"
+      ]
+    },
+    "images": [
+      "/products/terracotta-caftan-dress.webp"
     ],
-    sizes: WOMEN_SIZES,
-    stock: 9,
-    material: "Crepe with French lace sleeves",
-    fit: "Straight full length",
-    care: "Dry clean recommended.",
+    "colors": [
+      {
+        "name": "Terracotta",
+        "hex": "#B5532E",
+        "image": "/products/terracotta-caftan-dress.webp"
+      },
+      {
+        "name": "Mustard",
+        "hex": "#D4A23A"
+      },
+      {
+        "name": "Black",
+        "hex": "#1E1E1E"
+      }
+    ],
+    "sizes": WOMEN_SIZES,
+    "stock": 16,
+    "material": "Crepe",
+    "fit": "Relaxed, bell sleeves",
+    "care": "Gentle wash, line dry",
+    "createdAt": day(6)
   }),
   product({
-    id: "embroidered-hijab-kaftan",
-    name: "Embroidered Modest Kaftan",
-    description: "A modest kaftan with floral cuff embroidery, side pockets and a matching hijab.",
-    category: "kaftan",
-    style: "abaya-kaftan",
-    gender: "women",
-    price: 47000,
-    featured: true,
-    images: [pexels(37577271)],
-    colors: [
-      { name: "Sage", hex: "#93A68A", image: pexels(37577271) },
-      { name: "Mocha", hex: "#8A6650", image: pexels(37577278) },
+    "id": "emerald-satin-abaya-kaftan",
+    "name": "Emerald Satin Abaya Kaftan",
+    "description": "A fluid satin abaya-kaftan in deep emerald with wide sleeves and a self tie belt. Made for weddings, dinners and Eid.",
+    "productType": "Abaya kaftan",
+    "gender": "women",
+    "price": 58000,
+    "badge": "New",
+    "featured": true,
+    "typeOption": {
+      "label": "Style",
+      "values": [
+        "Open front",
+        "Closed"
+      ]
+    },
+    "images": [
+      "/products/emerald-satin-abaya-kaftan.webp"
     ],
-    sizes: WOMEN_SIZES,
-    stock: 22,
-    material: "Linen-look viscose",
-    fit: "Relaxed",
-    care: "Machine wash cold.",
+    "colors": [
+      {
+        "name": "Emerald",
+        "hex": "#1F6B45",
+        "image": "/products/emerald-satin-abaya-kaftan.webp"
+      },
+      {
+        "name": "Black",
+        "hex": "#1E1E1E"
+      },
+      {
+        "name": "Wine",
+        "hex": "#6E1E2A"
+      }
+    ],
+    "sizes": WOMEN_SIZES,
+    "stock": 12,
+    "material": "Satin-back crepe",
+    "fit": "Loose floor-length with tie belt",
+    "care": "Dry clean or cool hand wash",
+    "createdAt": day(7)
   }),
   product({
-    id: "emerald-resort-kaftan",
-    name: "Emerald Resort Kaftan",
-    description: "A tie-dye resort kaftan with balloon sleeves — beach, brunch and holiday ready.",
-    category: "kaftan",
-    style: "modern",
-    gender: "women",
-    price: 36000,
-    sellerId: "sel_lagosluxe",
-    status: "pending",
-    createdAt: "2026-10-28T08:10:00.000Z",
-    images: [pexels(29133857)],
-    colors: [
-      { name: "Emerald Tie-Dye", hex: "#1E8A4C", image: pexels(29133857) },
-      { name: "Ocean Tie-Dye", hex: "#1F6E99" },
+    "id": "black-crepe-abaya-kaftan",
+    "name": "Black Crepe Abaya Kaftan",
+    "description": "The everyday black abaya-kaftan: matte crepe, batwing sleeves and a clean round neck that never goes out of style.",
+    "productType": "Abaya kaftan",
+    "gender": "women",
+    "price": 45000,
+    "badge": "Bestseller",
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Regular",
+        "Long"
+      ]
+    },
+    "images": [
+      "/products/black-crepe-abaya-kaftan.webp"
     ],
-    sizes: ["Free size"],
-    stock: 20,
-    material: "Rayon",
-    fit: "Oversized",
-    care: "Hand wash cold.",
-  }),
-
-  // ───────────── KIDS ─────────────
-  product({
-    id: "boys-kaftan-and-cap",
-    name: "Boys' Kaftan & Cap",
-    description: "A mini kaftan with contrast placket and a matching cap — perfect for Eid and family photos.",
-    category: "kaftan",
-    style: "kids",
-    gender: "kids",
-    price: 22000,
-    featured: true,
-    sellerId: "sel_arewa",
-    images: [pexels(32437455)],
-    colors: [
-      { name: "Navy & Gold", hex: "#1C2541", image: pexels(32437455) },
-      { name: "Ivory", hex: "#F4F1EA", image: pexels(21620852) },
+    "colors": [
+      {
+        "name": "Black",
+        "hex": "#1E1E1E",
+        "image": "/products/black-crepe-abaya-kaftan.webp"
+      },
+      {
+        "name": "Navy",
+        "hex": "#1F2A44"
+      },
+      {
+        "name": "Mocha",
+        "hex": "#6B4F3A"
+      }
     ],
-    sizes: KIDS_SIZES,
-    stock: 30,
-    material: "Soft cotton",
-    fit: "Regular",
-    care: "Machine wash cold.",
+    "sizes": WOMEN_SIZES,
+    "stock": 26,
+    "material": "Matte crepe",
+    "fit": "Loose batwing cut",
+    "care": "Gentle wash, steam to refresh",
+    "createdAt": day(8)
   }),
   product({
-    id: "kids-kente-kaftan",
-    name: "Kids' Kente Kaftan",
-    description: "Bright kente-print kaftans for children, cut roomy for play and celebrations.",
-    category: "kaftan",
-    style: "kids",
-    gender: "kids",
-    price: 19500,
-    badge: "Festive",
-    images: [pexels(16175749), pexels(16175750), pexels(16175819)],
-    colors: [
-      { name: "Rainbow Kente", hex: "#E0457B", image: pexels(16175749), images: [pexels(16175749), pexels(16175750), pexels(16175819)] },
-      { name: "Gold Kente", hex: "#E3A21A", image: pexels(16175742) },
-      { name: "Sunshine Check", hex: "#F2B705", image: pexels(27777086) },
+    "id": "blush-kimono-kaftan",
+    "name": "Blush Kimono Kaftan",
+    "description": "A soft kimono-style kaftan with square sleeves and a matching sash. Throw it over a dress or wear it belted.",
+    "productType": "Kimono kaftan",
+    "gender": "women",
+    "price": 34000,
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Short",
+        "Midi"
+      ]
+    },
+    "images": [
+      "/products/blush-kimono-kaftan.webp"
     ],
-    sizes: KIDS_SIZES,
-    stock: 35,
-    material: "Cotton kente print",
-    fit: "Roomy",
-    care: "Machine wash cold, wash colours separately.",
+    "colors": [
+      {
+        "name": "Blush",
+        "hex": "#F2C9C4",
+        "image": "/products/blush-kimono-kaftan.webp"
+      },
+      {
+        "name": "Ivory",
+        "hex": "#F2ECDF"
+      },
+      {
+        "name": "Lilac",
+        "hex": "#C3B1E1"
+      }
+    ],
+    "sizes": WOMEN_SIZES,
+    "stock": 22,
+    "material": "Lightweight cotton voile",
+    "fit": "Open front with sash",
+    "care": "Hand wash cold",
+    "createdAt": day(9)
   }),
-
-  // A rejected demo listing, so the seller dashboard shows the rejection flow.
   product({
-    id: "plain-brown-kaftan-demo",
-    name: "Plain Brown Kaftan",
-    description: "Simple everyday kaftan.",
-    category: "kaftan",
-    style: "jalabiya",
-    gender: "men",
-    price: 15000,
-    sellerId: "sel_marrakech",
-    status: "rejected",
-    rejectionReason: "Please add a clear front photo on a plain background and a longer description (fabric, fit, care).",
-    createdAt: "2026-10-20T15:00:00.000Z",
-    images: [pexels(33853481)],
-    colors: [{ name: "Brown", hex: "#5C4033", image: pexels(33853481) }],
-    sizes: MEN_SIZES,
-    stock: 5,
-    material: "Cotton",
-    fit: "Regular",
-    care: "Machine wash.",
+    "id": "sage-kimono-wrap-kaftan",
+    "name": "Sage Kimono Wrap Kaftan",
+    "description": "A wrap kaftan in calm sage crinkle cotton, with kimono sleeves and a tie belt. Packs flat, never needs ironing.",
+    "productType": "Kimono kaftan",
+    "gender": "women",
+    "price": 36000,
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Midi",
+        "Maxi"
+      ]
+    },
+    "images": [
+      "/products/sage-kimono-wrap-kaftan.webp"
+    ],
+    "colors": [
+      {
+        "name": "Sage",
+        "hex": "#9CAF94",
+        "image": "/products/sage-kimono-wrap-kaftan.webp"
+      },
+      {
+        "name": "Sand",
+        "hex": "#D6BC94"
+      },
+      {
+        "name": "Black",
+        "hex": "#1E1E1E"
+      }
+    ],
+    "sizes": WOMEN_SIZES,
+    "stock": 18,
+    "material": "Crinkle cotton",
+    "fit": "Wrap front with fabric belt",
+    "care": "Machine wash gentle, no iron needed",
+    "createdAt": day(10)
+  }),
+  product({
+    "id": "sky-blue-linen-kaftan",
+    "name": "Sky Blue Linen Kaftan",
+    "description": "A breezy linen kaftan in sky blue with a notch neck and three-quarter sleeves. Choose the men's or women's cut.",
+    "productType": "Linen kaftan",
+    "gender": "unisex",
+    "price": 33000,
+    "typeOption": {
+      "label": "For",
+      "values": [
+        "Men",
+        "Women"
+      ]
+    },
+    "images": [
+      "/products/sky-blue-linen-kaftan.webp"
+    ],
+    "colors": [
+      {
+        "name": "Sky Blue",
+        "hex": "#8DB5DE",
+        "image": "/products/sky-blue-linen-kaftan.webp"
+      },
+      {
+        "name": "White",
+        "hex": "#F7F5F0"
+      },
+      {
+        "name": "Stone",
+        "hex": "#CFC6B5"
+      }
+    ],
+    "sizes": UNI_SIZES,
+    "stock": 28,
+    "material": "100% linen",
+    "fit": "Relaxed knee length, side slits",
+    "care": "Machine wash cold, line dry",
+    "createdAt": day(11)
+  }),
+  product({
+    "id": "mustard-cotton-kaftan-set",
+    "name": "Mustard Cotton Kaftan Set",
+    "description": "A confident mustard kaftan with mandarin collar and matching trousers. A bright, modern take on the classic set.",
+    "productType": "Kaftan",
+    "gender": "men",
+    "price": 44000,
+    "typeOption": {
+      "label": "Set",
+      "values": [
+        "Top only",
+        "Top + trousers"
+      ]
+    },
+    "images": [
+      "/products/mustard-cotton-kaftan-set.webp"
+    ],
+    "colors": [
+      {
+        "name": "Mustard",
+        "hex": "#D4A23A",
+        "image": "/products/mustard-cotton-kaftan-set.webp"
+      },
+      {
+        "name": "Olive",
+        "hex": "#5C6B3A"
+      },
+      {
+        "name": "Navy",
+        "hex": "#1F2A44"
+      }
+    ],
+    "sizes": MEN_SIZES,
+    "stock": 15,
+    "material": "Cotton sateen",
+    "fit": "Regular-fit top, straight trousers",
+    "care": "Machine wash cold, iron medium",
+    "createdAt": day(12)
+  }),
+  product({
+    "id": "burgundy-brushed-kaftan",
+    "name": "Burgundy Brushed Kaftan",
+    "description": "A deep burgundy kaftan in a soft brushed fabric with a short placket. Rich colour, simple cut.",
+    "productType": "Kaftan",
+    "gender": "men",
+    "price": 46000,
+    "compareAtPrice": 52000,
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Short",
+        "Long"
+      ]
+    },
+    "images": [
+      "/products/burgundy-brushed-kaftan.webp"
+    ],
+    "colors": [
+      {
+        "name": "Burgundy",
+        "hex": "#6E1E2A",
+        "image": "/products/burgundy-brushed-kaftan.webp"
+      },
+      {
+        "name": "Black",
+        "hex": "#1E1E1E"
+      },
+      {
+        "name": "Bottle Green",
+        "hex": "#1E4D3A"
+      }
+    ],
+    "sizes": MEN_SIZES,
+    "stock": 13,
+    "material": "Brushed cotton-blend",
+    "fit": "Regular fit, long sleeves",
+    "care": "Wash inside out, cold",
+    "createdAt": day(13)
+  }),
+  product({
+    "id": "grey-marl-lounge-kaftan",
+    "name": "Grey Marl Lounge Kaftan",
+    "description": "A cosy jersey kaftan for home, travel and slow Sundays. Soft, stretchy and relaxed.",
+    "productType": "Lounge kaftan",
+    "gender": "unisex",
+    "price": 22000,
+    "typeOption": {
+      "label": "For",
+      "values": [
+        "Men",
+        "Women"
+      ]
+    },
+    "images": [
+      "/products/grey-marl-lounge-kaftan.webp"
+    ],
+    "colors": [
+      {
+        "name": "Grey Marl",
+        "hex": "#A6A6A6",
+        "image": "/products/grey-marl-lounge-kaftan.webp"
+      },
+      {
+        "name": "Black",
+        "hex": "#1E1E1E"
+      },
+      {
+        "name": "Oat",
+        "hex": "#E3D9C6"
+      }
+    ],
+    "sizes": UNI_SIZES,
+    "stock": 40,
+    "material": "Cotton jersey",
+    "fit": "Relaxed knee length, dolman sleeves",
+    "care": "Machine wash warm",
+    "createdAt": day(14)
+  }),
+  product({
+    "id": "kids-white-jalabiya",
+    "name": "Kids' White Jalabiya",
+    "description": "A little white jalabiya for Jumu'ah, Eid and family photos. Soft cotton that's easy to wash. Add the matching knitted cap.",
+    "productType": "Jalabiya",
+    "gender": "kids",
+    "price": 18000,
+    "featured": true,
+    "typeOption": {
+      "label": "Set",
+      "values": [
+        "Robe only",
+        "Robe + cap"
+      ]
+    },
+    "images": [
+      "/products/kids-white-jalabiya.webp"
+    ],
+    "colors": [
+      {
+        "name": "White",
+        "hex": "#F7F5F0",
+        "image": "/products/kids-white-jalabiya.webp"
+      },
+      {
+        "name": "Sand",
+        "hex": "#D6BC94"
+      },
+      {
+        "name": "Sky Blue",
+        "hex": "#8DB5DE"
+      }
+    ],
+    "sizes": KIDS_SIZES,
+    "stock": 30,
+    "material": "Soft cotton",
+    "fit": "Ankle length, roomy",
+    "care": "Machine wash 30°C",
+    "createdAt": day(15)
+  }),
+  product({
+    "id": "kids-navy-kaftan-set",
+    "name": "Kids' Navy Kaftan Set",
+    "description": "A smart navy kaftan with a mandarin collar and matching easy-on trousers, sized for little ones.",
+    "productType": "Kaftan",
+    "gender": "kids",
+    "price": 21000,
+    "typeOption": {
+      "label": "Set",
+      "values": [
+        "Top only",
+        "Top + trousers"
+      ]
+    },
+    "images": [
+      "/products/kids-navy-kaftan-set.webp"
+    ],
+    "colors": [
+      {
+        "name": "Navy",
+        "hex": "#1F2A44",
+        "image": "/products/kids-navy-kaftan-set.webp"
+      },
+      {
+        "name": "Wine",
+        "hex": "#6E1E2A"
+      },
+      {
+        "name": "Olive",
+        "hex": "#5C6B3A"
+      }
+    ],
+    "sizes": KIDS_SIZES,
+    "stock": 24,
+    "material": "Cotton twill",
+    "fit": "Knee-length top, elastic-waist trousers",
+    "care": "Machine wash 30°C",
+    "createdAt": day(16)
+  }),
+  product({
+    "id": "kids-pink-kaftan-dress",
+    "name": "Kids' Pink Kaftan Dress",
+    "description": "A floaty pastel kaftan dress with flutter sleeves for girls. Light and comfy for parties and naming ceremonies.",
+    "productType": "Kaftan dress",
+    "gender": "kids",
+    "price": 19500,
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Midi",
+        "Maxi"
+      ]
+    },
+    "images": [
+      "/products/kids-pink-kaftan-dress.webp"
+    ],
+    "colors": [
+      {
+        "name": "Pink",
+        "hex": "#F4C2C2",
+        "image": "/products/kids-pink-kaftan-dress.webp"
+      },
+      {
+        "name": "Lilac",
+        "hex": "#C3B1E1"
+      },
+      {
+        "name": "Ivory",
+        "hex": "#F2ECDF"
+      }
+    ],
+    "sizes": KIDS_SIZES,
+    "stock": 20,
+    "material": "Cotton lawn",
+    "fit": "Flowy with flutter sleeves",
+    "care": "Machine wash gentle",
+    "createdAt": day(17)
+  }),
+  product({
+    "id": "kids-sage-linen-kaftan",
+    "name": "Kids' Sage Linen Kaftan",
+    "description": "A breathable linen kaftan for kids with a short button placket. Easy to wear on hot days.",
+    "productType": "Linen kaftan",
+    "gender": "kids",
+    "price": 17500,
+    "typeOption": {
+      "label": "For",
+      "values": [
+        "Boy",
+        "Girl"
+      ]
+    },
+    "images": [
+      "/products/kids-sage-linen-kaftan.webp"
+    ],
+    "colors": [
+      {
+        "name": "Sage",
+        "hex": "#9CAF94",
+        "image": "/products/kids-sage-linen-kaftan.webp"
+      },
+      {
+        "name": "Sky Blue",
+        "hex": "#8DB5DE"
+      },
+      {
+        "name": "White",
+        "hex": "#F7F5F0"
+      }
+    ],
+    "sizes": KIDS_SIZES,
+    "stock": 26,
+    "material": "Linen-cotton blend",
+    "fit": "Knee length, short sleeves",
+    "care": "Machine wash cold",
+    "createdAt": day(18)
+  }),
+  product({
+    "id": "cream-hooded-djellaba",
+    "name": "Cream Hooded Djellaba",
+    "description": "A Moroccan-style djellaba with a pointed hood in a warm cream weave. Perfect for cool harmattan mornings.",
+    "productType": "Moroccan djellaba",
+    "gender": "men",
+    "price": 62000,
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Regular",
+        "Tall"
+      ]
+    },
+    "images": [
+      "/products/cream-hooded-djellaba.webp"
+    ],
+    "colors": [
+      {
+        "name": "Cream",
+        "hex": "#EFE6D2",
+        "image": "/products/cream-hooded-djellaba.webp"
+      },
+      {
+        "name": "Grey",
+        "hex": "#A6A6A6"
+      },
+      {
+        "name": "Brown",
+        "hex": "#5A3A22"
+      }
+    ],
+    "sizes": MEN_SIZES,
+    "stock": 10,
+    "material": "Wool-cotton weave",
+    "fit": "Loose ankle length with hood",
+    "care": "Dry clean or cool hand wash",
+    "createdAt": day(19)
+  }),
+  product({
+    "id": "chocolate-brown-thobe",
+    "name": "Chocolate Brown Thobe",
+    "description": "A chocolate-brown thobe with a shirt collar, hidden placket and cuffed sleeves. Polished and easy to care for.",
+    "productType": "Thobe",
+    "gender": "men",
+    "price": 39000,
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Regular",
+        "Tall"
+      ]
+    },
+    "images": [
+      "/products/chocolate-brown-thobe.webp"
+    ],
+    "colors": [
+      {
+        "name": "Chocolate",
+        "hex": "#5A3A22",
+        "image": "/products/chocolate-brown-thobe.webp"
+      },
+      {
+        "name": "Navy",
+        "hex": "#1F2A44"
+      },
+      {
+        "name": "Grey",
+        "hex": "#A6A6A6"
+      }
+    ],
+    "sizes": MEN_SIZES,
+    "stock": 18,
+    "material": "Cotton-poly blend",
+    "fit": "Ankle length, shirt collar, cuffed sleeves",
+    "care": "Machine wash cold",
+    "createdAt": day(20)
+  }),
+  product({
+    "id": "lilac-chiffon-beach-kaftan",
+    "name": "Lilac Chiffon Beach Kaftan",
+    "description": "A sheer chiffon kaftan cover-up in soft lilac. Wear it at the pool, on the beach or over a slip dress.",
+    "productType": "Beach kaftan",
+    "gender": "women",
+    "price": 27000,
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Midi",
+        "Maxi"
+      ]
+    },
+    "images": [
+      "/products/lilac-chiffon-beach-kaftan.webp"
+    ],
+    "colors": [
+      {
+        "name": "Lilac",
+        "hex": "#C3B1E1",
+        "image": "/products/lilac-chiffon-beach-kaftan.webp"
+      },
+      {
+        "name": "White",
+        "hex": "#F7F5F0"
+      },
+      {
+        "name": "Coral",
+        "hex": "#F27C5C"
+      }
+    ],
+    "sizes": WOMEN_SIZES,
+    "stock": 25,
+    "material": "Sheer chiffon",
+    "fit": "Loose, floaty cover-up",
+    "care": "Hand wash cold",
+    "createdAt": day(21)
+  }),
+  product({
+    "id": "coral-cotton-maxi-kaftan",
+    "name": "Coral Cotton Maxi Kaftan",
+    "description": "A bright coral maxi kaftan with wide sleeves and a keyhole neck. Cool, easy and full of colour.",
+    "productType": "Kaftan",
+    "gender": "women",
+    "price": 31000,
+    "badge": "Summer",
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Midi",
+        "Maxi"
+      ]
+    },
+    "images": [
+      "/products/coral-cotton-maxi-kaftan.webp"
+    ],
+    "colors": [
+      {
+        "name": "Coral",
+        "hex": "#F27C5C",
+        "image": "/products/coral-cotton-maxi-kaftan.webp"
+      },
+      {
+        "name": "Sunshine",
+        "hex": "#F2C14E"
+      },
+      {
+        "name": "Turquoise",
+        "hex": "#2BA6A0"
+      }
+    ],
+    "sizes": WOMEN_SIZES,
+    "stock": 22,
+    "material": "Cotton voile",
+    "fit": "Loose with keyhole neck",
+    "care": "Machine wash gentle",
+    "createdAt": day(22)
+  }),
+  product({
+    "id": "teal-silk-blend-kaftan",
+    "name": "Teal Silk-Blend Kaftan",
+    "description": "An elegant floor-length kaftan in a deep teal silk blend with butterfly sleeves and a simple V-neck.",
+    "productType": "Kaftan",
+    "gender": "women",
+    "price": 64000,
+    "compareAtPrice": 72000,
+    "featured": true,
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Midi",
+        "Maxi"
+      ]
+    },
+    "images": [
+      "/products/teal-silk-blend-kaftan.webp"
+    ],
+    "colors": [
+      {
+        "name": "Teal",
+        "hex": "#145A5A",
+        "image": "/products/teal-silk-blend-kaftan.webp"
+      },
+      {
+        "name": "Wine",
+        "hex": "#6E1E2A"
+      },
+      {
+        "name": "Gold",
+        "hex": "#C9A24A"
+      }
+    ],
+    "sizes": WOMEN_SIZES,
+    "stock": 9,
+    "material": "Silk-blend satin",
+    "fit": "Floor length, butterfly sleeves",
+    "care": "Dry clean only",
+    "createdAt": day(23)
+  }),
+  product({
+    "id": "stone-linen-short-kaftan",
+    "name": "Stone Linen Short Kaftan",
+    "description": "A short linen kaftan in natural stone with a band collar and side slits. Add the drawstring trousers for an easy set.",
+    "productType": "Kaftan shirt",
+    "gender": "men",
+    "price": 29000,
+    "typeOption": {
+      "label": "Set",
+      "values": [
+        "Top only",
+        "Top + trousers"
+      ]
+    },
+    "images": [
+      "/products/stone-linen-short-kaftan.webp"
+    ],
+    "colors": [
+      {
+        "name": "Stone",
+        "hex": "#CFC6B5",
+        "image": "/products/stone-linen-short-kaftan.webp"
+      },
+      {
+        "name": "White",
+        "hex": "#F7F5F0"
+      },
+      {
+        "name": "Olive",
+        "hex": "#5C6B3A"
+      }
+    ],
+    "sizes": MEN_SIZES,
+    "stock": 27,
+    "material": "100% linen",
+    "fit": "Hip length, band collar",
+    "care": "Machine wash cold, line dry",
+    "createdAt": day(24)
+  }),
+  product({
+    "id": "black-minimal-kaftan-set",
+    "name": "Black Minimal Kaftan Set",
+    "description": "An all-black kaftan and trousers with a hidden placket and clean round neck. Minimal, modern, sharp.",
+    "productType": "Kaftan",
+    "gender": "men",
+    "price": 47000,
+    "badge": "Bestseller",
+    "featured": true,
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Short",
+        "Long"
+      ]
+    },
+    "images": [
+      "/products/black-minimal-kaftan-set.webp"
+    ],
+    "colors": [
+      {
+        "name": "Black",
+        "hex": "#1E1E1E",
+        "image": "/products/black-minimal-kaftan-set.webp"
+      },
+      {
+        "name": "Navy",
+        "hex": "#1F2A44"
+      },
+      {
+        "name": "Charcoal",
+        "hex": "#4A4A4A"
+      }
+    ],
+    "sizes": MEN_SIZES,
+    "stock": 16,
+    "material": "Matte cotton",
+    "fit": "Regular-fit top, tapered trousers",
+    "care": "Wash inside out, cold",
+    "createdAt": day(25)
+  }),
+  product({
+    "id": "off-white-pinstripe-jalabiya",
+    "name": "Off-White Pinstripe Jalabiya",
+    "description": "A light jalabiya in off-white cotton with a fine grey pinstripe. Fresh, cool and easy to wear.",
+    "productType": "Jalabiya",
+    "gender": "men",
+    "price": 37000,
+    "typeOption": {
+      "label": "Length",
+      "values": [
+        "Regular",
+        "Tall"
+      ]
+    },
+    "images": [
+      "/products/off-white-pinstripe-jalabiya.webp"
+    ],
+    "colors": [
+      {
+        "name": "Off-White Pinstripe",
+        "hex": "#F4F1EA",
+        "image": "/products/off-white-pinstripe-jalabiya.webp"
+      },
+      {
+        "name": "Blue Pinstripe",
+        "hex": "#C9D8E8"
+      }
+    ],
+    "sizes": MEN_SIZES,
+    "stock": 19,
+    "material": "Cotton shirting",
+    "fit": "Loose ankle length",
+    "care": "Machine wash cold",
+    "createdAt": day(26)
+  }),
+  product({
+    "id": "dusty-rose-abaya-kaftan",
+    "name": "Dusty Rose Abaya Kaftan",
+    "description": "An open-front abaya-kaftan in dusty rose with wide sleeves. Choose it alone or with the matching inner slip dress.",
+    "productType": "Abaya kaftan",
+    "gender": "women",
+    "price": 49000,
+    "typeOption": {
+      "label": "Set",
+      "values": [
+        "Kaftan only",
+        "With inner slip"
+      ]
+    },
+    "images": [
+      "/products/dusty-rose-abaya-kaftan.webp"
+    ],
+    "colors": [
+      {
+        "name": "Dusty Rose",
+        "hex": "#C98C8C",
+        "image": "/products/dusty-rose-abaya-kaftan.webp"
+      },
+      {
+        "name": "Sage",
+        "hex": "#9CAF94"
+      },
+      {
+        "name": "Navy",
+        "hex": "#1F2A44"
+      }
+    ],
+    "sizes": WOMEN_SIZES,
+    "stock": 14,
+    "material": "Soft crepe",
+    "fit": "Open front, ankle length",
+    "care": "Gentle wash, cool iron",
+    "createdAt": day(27)
+  }),
+  product({
+    "id": "indigo-adire-kaftan",
+    "name": "Indigo Adire Kaftan",
+    "description": "A relaxed kaftan in hand-dyed indigo adire cotton. Every piece has its own pattern.",
+    "productType": "Adire kaftan",
+    "gender": "unisex",
+    "price": 34000,
+    "badge": "Handmade",
+    "typeOption": {
+      "label": "For",
+      "values": [
+        "Men",
+        "Women"
+      ]
+    },
+    "images": [
+      "/products/indigo-adire-kaftan.webp"
+    ],
+    "colors": [
+      {
+        "name": "Indigo",
+        "hex": "#2E3F7F",
+        "image": "/products/indigo-adire-kaftan.webp"
+      },
+      {
+        "name": "Rust",
+        "hex": "#9C4A2F"
+      }
+    ],
+    "sizes": UNI_SIZES,
+    "stock": 12,
+    "material": "Hand-dyed adire cotton",
+    "fit": "Relaxed knee length, short sleeves",
+    "care": "Hand wash cold separately",
+    "createdAt": day(28)
+  }),
+  product({
+    "id": "camel-linen-kaftan-set",
+    "name": "Camel Linen Kaftan Set",
+    "description": "A camel linen kaftan with band collar and matching trousers. Warm tone, light fabric, easy elegance.",
+    "productType": "Kaftan",
+    "gender": "men",
+    "price": 55000,
+    "featured": true,
+    "typeOption": {
+      "label": "Set",
+      "values": [
+        "Top only",
+        "Top + trousers"
+      ]
+    },
+    "images": [
+      "/products/camel-linen-kaftan-set.webp"
+    ],
+    "colors": [
+      {
+        "name": "Camel",
+        "hex": "#B07A45",
+        "image": "/products/camel-linen-kaftan-set.webp"
+      },
+      {
+        "name": "Ivory",
+        "hex": "#F2ECDF"
+      },
+      {
+        "name": "Olive",
+        "hex": "#5C6B3A"
+      }
+    ],
+    "sizes": MEN_SIZES,
+    "stock": 11,
+    "material": "100% linen",
+    "fit": "Regular fit, band collar",
+    "care": "Machine wash cold, line dry",
+    "createdAt": day(29)
   }),
 ];
 
-/** Demo orders so the admin and seller dashboards have something to show. */
-export const seedOrders: Order[] = [
-  {
-    id: "ord_demo_1",
-    reference: "RF-261024-DEMO1",
-    customer: {
-      fullName: "Aisha Yusuf",
-      email: "aisha@example.com",
-      phone: "08031234567",
-      address: "12 Ahmadu Bello Way",
-      city: "Kaduna",
-      state: "Kaduna",
-    },
-    items: [
-      {
-        productId: "aso-oke-striped-agbada",
-        slug: "aso-oke-striped-agbada",
-        name: "Aso-Oke Striped Agbada",
-        image: pexels(36690235, 600),
-        color: "Emerald Stripe",
-        size: "XL",
-        quantity: 1,
-        unitPrice: 240000,
-        lineTotal: 240000,
-        sellerId: "sel_arewa",
-        sellerName: "Arewa Threads",
-        commissionPercent: 10,
-        commissionAmount: 24000,
-        sellerAmount: 216000,
-      },
-      {
-        productId: "classic-white-jalabiya",
-        slug: "classic-white-jalabiya",
-        name: "Classic Jalabiya (Thobe)",
-        image: pexels(7129747, 600),
-        color: "White",
-        size: "L",
-        quantity: 2,
-        unitPrice: 28000,
-        lineTotal: 56000,
-        sellerId: PLATFORM_SELLER_ID,
-        sellerName: SITE_NAME,
-        commissionPercent: 0,
-        commissionAmount: 0,
-        sellerAmount: 56000,
-      },
-    ],
-    subtotal: 296000,
-    shippingCost: 3500,
-    total: 299500,
-    commissionTotal: 24000,
-    sellerSplits: [
-      { sellerId: "sel_arewa", sellerName: "Arewa Threads", grossAmount: 240000, commissionAmount: 24000, sellerAmount: 216000 },
-      { sellerId: PLATFORM_SELLER_ID, sellerName: SITE_NAME, grossAmount: 56000, commissionAmount: 0, sellerAmount: 56000 },
-    ],
-    shippingMethod: "standard",
-    paymentMethod: "card",
-    status: "shipped",
-    createdAt: "2026-10-24T11:20:00.000Z",
-  },
-  {
-    id: "ord_demo_2",
-    reference: "RF-261026-DEMO2",
-    customer: {
-      fullName: "Chinedu Eze",
-      email: "chinedu@example.com",
-      phone: "08059876543",
-      address: "4 Admiralty Way, Lekki Phase 1",
-      city: "Lagos",
-      state: "Lagos",
-    },
-    items: [
-      {
-        productId: "ruby-gold-kaftan",
-        slug: "ruby-gold-kaftan",
-        name: "Ruby & Gold Kaftan",
-        image: pexels(7249704, 600),
-        color: "Ruby",
-        size: "Free size",
-        quantity: 1,
-        unitPrice: 76000,
-        lineTotal: 76000,
-        sellerId: "sel_lagosluxe",
-        sellerName: "Lagos Luxe Kaftans",
-        commissionPercent: 10,
-        commissionAmount: 7600,
-        sellerAmount: 68400,
-      },
-      {
-        productId: "silk-belted-kaftan",
-        slug: "silk-belted-kaftan",
-        name: "Silk Belted Kaftan",
-        image: pexels(33846700, 600),
-        color: "Silver",
-        size: "M",
-        quantity: 1,
-        unitPrice: 98000,
-        lineTotal: 98000,
-        sellerId: "sel_marrakech",
-        sellerName: "Marrakech House NG",
-        commissionPercent: 10,
-        commissionAmount: 9800,
-        sellerAmount: 88200,
-      },
-    ],
-    subtotal: 174000,
-    shippingCost: 6500,
-    total: 180500,
-    commissionTotal: 17400,
-    sellerSplits: [
-      { sellerId: "sel_lagosluxe", sellerName: "Lagos Luxe Kaftans", grossAmount: 76000, commissionAmount: 7600, sellerAmount: 68400 },
-      { sellerId: "sel_marrakech", sellerName: "Marrakech House NG", grossAmount: 98000, commissionAmount: 9800, sellerAmount: 88200 },
-    ],
-    shippingMethod: "priority",
-    paymentMethod: "transfer",
-    status: "paid",
-    createdAt: "2026-10-26T16:45:00.000Z",
-  },
-  {
-    id: "ord_demo_3",
-    reference: "RF-261019-DEMO3",
-    customer: {
-      fullName: "Halima Sani",
-      email: "halima@example.com",
-      phone: "08021112233",
-      address: "7 Gwarinpa 3rd Avenue",
-      city: "Abuja",
-      state: "Federal Capital Territory (FCT)",
-    },
-    items: [
-      {
-        productId: "boys-kaftan-and-cap",
-        slug: "boys-kaftan-and-cap",
-        name: "Boys' Kaftan & Cap",
-        image: pexels(32437455, 600),
-        color: "Navy & Gold",
-        size: "6-7Y",
-        quantity: 2,
-        unitPrice: 22000,
-        lineTotal: 44000,
-        sellerId: "sel_arewa",
-        sellerName: "Arewa Threads",
-        commissionPercent: 10,
-        commissionAmount: 4400,
-        sellerAmount: 39600,
-      },
-    ],
-    subtotal: 44000,
-    shippingCost: 3500,
-    total: 47500,
-    commissionTotal: 4400,
-    sellerSplits: [
-      { sellerId: "sel_arewa", sellerName: "Arewa Threads", grossAmount: 44000, commissionAmount: 4400, sellerAmount: 39600 },
-    ],
-    shippingMethod: "standard",
-    paymentMethod: "card",
-    status: "delivered",
-    createdAt: "2026-10-19T09:05:00.000Z",
-  },
-];
+/** Photos used by the homepage "Now in: Kaftans" feature. */
+export const KAFTAN_FEATURE_IMAGES = {
+  men: "/products/camel-linen-kaftan-set.webp",
+  women: "/products/emerald-satin-abaya-kaftan.webp",
+  kids: "/products/kids-pink-kaftan-dress.webp",
+};
 
-/** Quick lookups used by the server-side mock payment route. */
 export function findSeedProduct(idOrSlug: string): Product | undefined {
   return seedProducts.find((item) => item.id === idOrSlug || item.slug === idOrSlug);
 }

@@ -1,23 +1,41 @@
 /**
  * THE single entry point for data in the frontend.
  *
- * Components import from "@/lib/api" and never talk to localStorage or fetch()
- * for domain data directly. Which implementation runs is decided by
- * NEXT_PUBLIC_USE_MOCK_API (see src/lib/config.ts and BACKEND.md):
- *   - mock.ts  -> demo data stored in the browser (default)
- *   - http.ts  -> real REST backend at NEXT_PUBLIC_API_BASE_URL
+ * Components import from "@/lib/api" and never talk to localStorage, fetch() or
+ * a database client for domain data directly. Which implementation runs is
+ * decided by NEXT_PUBLIC_API_MODE (see src/lib/config.ts and BACKEND.md):
+ *   - mock.ts      -> demo store in the browser (default)
+ *   - http.ts      -> REST backend at NEXT_PUBLIC_API_BASE_URL
+ *   - supabase.ts  -> not written yet. To add it: create src/lib/api/supabase.ts
+ *                     exporting `supabaseApi: DataApi`, import it below and add
+ *                     it to `implementations`. Nothing else changes.
  */
-import { USE_MOCK_API } from "@/lib/config";
+import { API_MODE, type ApiMode } from "@/lib/config";
 import type { DataApi } from "./contract";
 import { httpApi } from "./http";
 import { mockApi } from "./mock";
+// import { supabaseApi } from "./supabase";
 
-export const api: DataApi = USE_MOCK_API ? mockApi : httpApi;
+const implementations: Partial<Record<ApiMode, DataApi>> = {
+  mock: mockApi,
+  http: httpApi,
+  // supabase: supabaseApi,
+};
+
+function pickImplementation(): DataApi {
+  const chosen = implementations[API_MODE];
+  if (chosen) return chosen;
+  if (typeof console !== "undefined") {
+    console.warn(`[api] NEXT_PUBLIC_API_MODE="${API_MODE}" has no implementation yet; falling back to the mock API.`);
+  }
+  return mockApi;
+}
+
+export const api: DataApi = pickImplementation();
 
 export { ApiError } from "./contract";
 export type { DataApi } from "./contract";
 
-export const getStyles: DataApi["getStyles"] = (...args) => api.getStyles(...args);
 export const getProducts: DataApi["getProducts"] = (...args) => api.getProducts(...args);
 export const getProduct: DataApi["getProduct"] = (...args) => api.getProduct(...args);
 

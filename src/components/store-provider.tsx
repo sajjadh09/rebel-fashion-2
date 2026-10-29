@@ -25,6 +25,8 @@ export type CartItem = {
   name: string;
   image: string;
   price: number;
+  /** Chosen Type value (e.g. "Long"); "" when the product has no Type option. */
+  type: string;
   color: string;
   size: string;
   quantity: number;
@@ -34,6 +36,7 @@ export type CartItem = {
 
 type AddToCartInput = {
   product: Product;
+  type?: string;
   color?: string;
   size?: string;
   quantity?: number;
@@ -80,6 +83,7 @@ function initMemoryStore() {
   if (Array.isArray(savedCart)) {
     cartMemory = savedCart.map((item) => ({
       ...item,
+      type: item.type ?? "",
       sellerId: item.sellerId ?? PLATFORM_SELLER_ID,
       sellerName: item.sellerName ?? "",
     }));
@@ -183,7 +187,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const addToCart = useCallback(
     (
-      { product, color, size, quantity = 1 }: AddToCartInput,
+      { product, type, color, size, quantity = 1 }: AddToCartInput,
       openDrawer = true
     ) => {
       const safeQuantity = Number.isFinite(quantity)
@@ -197,10 +201,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const selectedSize =
         product.sizes.length > 0 ? (size ?? product.sizes[0]) : "";
 
+      const typeValues = product.typeOption?.values ?? [];
+      const selectedType = typeValues.length > 0 ? (type ?? typeValues[0]) : "";
+
       mutateCart((previous) => {
         const existingItem = previous.find(
           (item) =>
             item.productId === product.id &&
+            (item.type ?? "") === selectedType &&
             item.color === selectedColor &&
             item.size === selectedSize
         );
@@ -217,12 +225,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
 
         const newItem: CartItem = {
-          id: `${product.id}-${selectedColor}-${selectedSize}`,
+          id: [product.id, selectedType, selectedColor, selectedSize].filter(Boolean).join("|"),
           productId: product.id,
           slug: product.slug,
           name: product.name,
           image: colorVariant?.image ?? product.images[0],
           price: product.price,
+          type: selectedType,
           color: selectedColor,
           size: selectedSize,
           quantity: safeQuantity,
