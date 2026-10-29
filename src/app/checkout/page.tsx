@@ -9,59 +9,53 @@ import {
   CreditCard,
   Landmark,
   LockKeyhole,
+  MapPin,
+  Navigation,
   PackageCheck,
   ShieldCheck,
   Truck,
+  AlertCircle,
+  LoaderCircle,
 } from "lucide-react";
 
 import { useStore } from "@/components/store-provider";
 import { formatPrice } from "@/lib/store-data";
 
 const NIGERIAN_STATES = [
-  "Abia",
-  "Adamawa",
-  "Akwa Ibom",
-  "Anambra",
-  "Bauchi",
-  "Bayelsa",
-  "Benue",
-  "Borno",
-  "Cross River",
-  "Delta",
-  "Ebonyi",
-  "Edo",
-  "Ekiti",
-  "Enugu",
-  "Federal Capital Territory (FCT)",
-  "Gombe",
-  "Imo",
-  "Jigawa",
-  "Kaduna",
-  "Kano",
-  "Katsina",
-  "Kebbi",
-  "Kogi",
-  "Kwara",
-  "Lagos",
-  "Nasarawa",
-  "Niger",
-  "Ogun",
-  "Ondo",
-  "Osun",
-  "Oyo",
-  "Plateau",
-  "Rivers",
-  "Sokoto",
-  "Taraba",
-  "Yobe",
-  "Zamfara",
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa",
+  "Benue", "Borno", "Cross River", "Delta", "Ebonyi", "Edo",
+  "Ekiti", "Enugu", "Federal Capital Territory (FCT)", "Gombe",
+  "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi",
+  "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun",
+  "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
 ];
 
-type PaymentMethod = "card" | "transfer" | "pod";
+type PaymentMethod = "card" | "transfer";
 type ShippingMethod = "standard" | "priority";
+type Coordinates = { latitude: number; longitude: number };
+
+function matchNigerianState(value?: string): string {
+  if (!value) return "";
+
+  const normalized = value.trim().toLowerCase();
+
+  if (
+    normalized.includes("abuja") ||
+    normalized.includes("federal capital territory") ||
+    normalized === "fct"
+  ) {
+    return "Federal Capital Territory (FCT)";
+  }
+
+  return (
+    NIGERIAN_STATES.find(
+      (state) => state.toLowerCase() === normalized
+    ) ?? ""
+  );
+}
 
 export default function CheckoutPage() {
-  const { cart, subtotal, clearCart } = useStore();
+  const { cart, subtotal } = useStore();
 
   const [form, setForm] = useState({
     fullName: "",
@@ -77,19 +71,192 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationMessage, setLocationMessage] = useState("");
+  const [locationMessageType, setLocationMessageType] =
+    useState<"success" | "error" | "info">("info");
+  const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
 
   const shippingCost =
     subtotal === 0 ? 0 : form.shippingMethod === "priority" ? 6500 : 3500;
 
   const finalTotal = Math.max(0, subtotal + shippingCost);
 
-  function updateField(
-    field: keyof typeof form,
-    value: string
-  ) {
+  function updateField(field: keyof typeof form, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: "" }));
     setSubmitError("");
+  }
+
+  function scrollToFirstError(fieldName: string) {
+    window.requestAnimationFrame(() => {
+      const field = document.getElementById(fieldName);
+
+      if (field) {
+        field.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+        field.focus({ preventScroll: true });
+      }
+    });
+  }
+
+  function getCurrentPosition(): Promise<GeolocationPosition> {
+    return new Promise((resolve, reject) => {
+      if (!("geolocation" in navigator)) {
+        reject(
+          new Error(
+            "Location is not supported by this browser. Please enter your address manually."
+          )
+        );
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        resolve,
+        (error) => {
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              reject(
+                new Error(
+                  "Location permission was denied. Allow location access in your browser settings or enter your address manually."
+                )
+              );
+              break;
+
+            case error.POSITION_UNAVAILABLE:
+              reject(
+                new Error(
+                  "Your phone could not determine its location. Turn on Location and try again."
+                )
+              );
+              break;
+
+            case error.TIMEOUT:
+              reject(
+                new Error(
+                  "Finding your location took too long. Please try again or enter your address manually."
+                )
+              );
+              break;
+
+            default:
+              reject(
+                new Error(
+                  "We couldn't get your location. Please enter your address manually."
+                )
+              );
+          }
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 60000,
+          maximumAge: 120000,
+        }
+      );
+    });
+  }
+
+  async function useMyLocation() {
+    setIsLocating(true);
+    setLocationMessage("");
+    setSubmitError("");
+
+    try {
+      const position = await getCurrentPosition();
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+
+      setCoordinates({ latitude, longitude });
+      setLocationMessageType("info");
+      setLocationMessage(
+        "Location found. Looking up a readable address…"
+      );
+
+      const query = new URLSearchParams({
+        format: "jsonv2",
+        lat: String(latitude),
+        lon: String(longitude),
+        zoom: "18",
+        addressdetails: "1",
+      });
+
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?${query.toString()}`,
+        { headers: { Accept: "application/json" } }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "GPS location found, but the address lookup failed. Please enter or correct your address below."
+        );
+      }
+
+      const result = await response.json();
+      const parts = result?.address ?? {};
+
+      const streetParts = [
+        parts.house_number,
+        parts.road || parts.pedestrian || parts.residential,
+      ].filter(Boolean);
+
+      const area =
+        parts.suburb ||
+        parts.neighbourhood ||
+        parts.quarter ||
+        parts.city_district ||
+        "";
+
+      const addressValue = [
+        streetParts.join(" "),
+        area && area !== parts.city ? area : "",
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      const cityValue =
+        parts.city ||
+        parts.town ||
+        parts.village ||
+        parts.municipality ||
+        parts.county ||
+        parts.state_district ||
+        "";
+
+      const stateValue = matchNigerianState(parts.state);
+
+      setForm((current) => ({
+        ...current,
+        address: addressValue || current.address,
+        city: cityValue || current.city,
+        state: stateValue || current.state,
+      }));
+
+      setErrors((current) => ({
+        ...current,
+        address: "",
+        city: "",
+        state: "",
+      }));
+
+      setLocationMessageType("success");
+      setLocationMessage(
+        addressValue || cityValue
+          ? "Location added. Please review and edit the address details before continuing."
+          : "GPS location found, but no readable address was returned. Please enter your address manually."
+      );
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "We couldn't retrieve your location. You can enter your address manually.";
+
+      setLocationMessageType("error");
+      setLocationMessage(message);
+    } finally {
+      setIsLocating(false);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -107,6 +274,7 @@ export default function CheckoutPage() {
     }
 
     const phoneDigits = form.phone.replace(/\D/g, "");
+
     if (phoneDigits.length < 10 || phoneDigits.length > 11) {
       nextErrors.phone = "Please enter a valid Nigerian phone number.";
     }
@@ -125,33 +293,29 @@ export default function CheckoutPage() {
 
     setErrors(nextErrors);
 
-    if (Object.keys(nextErrors).length > 0) return;
+    const firstInvalidField = [
+      "fullName",
+      "email",
+      "phone",
+      "address",
+      "city",
+      "state",
+    ].find((field) => nextErrors[field]);
+
+    if (firstInvalidField) {
+      scrollToFirstError(firstInvalidField);
+      return;
+    }
 
     if (cart.length === 0) {
       setSubmitError("Your shopping bag is empty.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      /*
-       * BACKEND INTEGRATION CONTRACT
-       *
-       * POST /api/checkout
-       *
-       * The backend must validate the cart and calculate the real total.
-       *
-       * Card / transfer response:
-       * { "checkoutUrl": "https://..." }
-       *
-       * Pay on delivery response:
-       * { "orderId": "a-real-order-reference" }
-       *
-       * The backend engineer can adjust this contract to match the
-       * project's actual API and FairSurePay integration.
-       */
-
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -164,6 +328,7 @@ export default function CheckoutPage() {
             city: form.city.trim(),
             state: form.state,
           },
+          deliveryLocation: coordinates,
           items: cart,
           shippingMethod: form.shippingMethod,
           paymentMethod: form.paymentMethod,
@@ -176,10 +341,6 @@ export default function CheckoutPage() {
       const data: {
         error?: string;
         checkoutUrl?: string;
-        orderId?: string;
-        total?: number;
-        subtotal?: number;
-        shippingCost?: number;
       } = await response.json().catch(() => ({}));
 
       if (!response.ok) {
@@ -189,62 +350,48 @@ export default function CheckoutPage() {
         );
       }
 
-      if (form.paymentMethod === "card" || form.paymentMethod === "transfer") {
-        if (
-          !data.checkoutUrl ||
-          !/^https:\/\//i.test(data.checkoutUrl)
-        ) {
-          throw new Error(
-            "The payment service has not returned a valid checkout link. No payment has been confirmed."
-          );
-        }
-
-        // The backend supplies the hosted payment URL.
-        window.location.assign(data.checkoutUrl);
-        return;
-      }
-
-      if (!data.orderId) {
+      if (
+        !data.checkoutUrl ||
+        !/^https:\/\//i.test(data.checkoutUrl)
+      ) {
         throw new Error(
-          "The server did not return an order reference. Please contact support before trying again."
+          "The payment service has not returned a valid checkout link. No payment has been confirmed."
         );
       }
 
-      // Store confirmation details only after the backend accepts the order.
-      const orderSnapshot = {
-        orderId: data.orderId,
-        customerName: form.fullName.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        address: `${form.address.trim()}, ${form.city.trim()}, ${form.state}`,
-        paymentMethod: "pod",
-        total: data.total ?? finalTotal,
-        subtotal: data.subtotal ?? subtotal,
-        shippingCost: data.shippingCost ?? shippingCost,
-        items: cart,
-        date: new Date().toLocaleDateString("en-NG", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        }),
-      };
-
-      sessionStorage.setItem(
-        "last_store_order",
-        JSON.stringify(orderSnapshot)
-      );
-
-      clearCart();
-      window.location.assign("/checkout/success");
+      window.location.assign(data.checkoutUrl);
     } catch (error) {
       setSubmitError(
         error instanceof Error
           ? error.message
           : "Something went wrong. Please try again."
       );
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  const inputClass =
+    "mt-2 w-full rounded-xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-4 py-3 text-sm text-[color:var(--brand-charcoal)] outline-none transition focus:border-[color:var(--brand-primary)] focus:ring-2 focus:ring-[color:var(--brand-primary)]/20";
+
+  const sectionClass =
+    "rounded-3xl border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-5 sm:p-7";
+
+  function renderError(field: string) {
+    if (!errors[field]) return null;
+
+    return (
+      <span
+        id={`${field}-error`}
+        role="alert"
+        className="mt-2 flex items-start gap-1.5 text-xs font-medium text-red-600"
+      >
+        <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        {errors[field]}
+      </span>
+    );
   }
 
   if (cart.length === 0) {
@@ -269,12 +416,6 @@ export default function CheckoutPage() {
     );
   }
 
-  const inputClass =
-    "mt-2 w-full rounded-xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] px-4 py-3 text-sm text-[color:var(--brand-charcoal)] outline-none transition focus:border-[color:var(--brand-primary)]";
-
-  const sectionClass =
-    "rounded-3xl border border-[color:var(--brand-border)] bg-[color:var(--brand-white)] p-5 sm:p-7";
-
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8 flex items-center justify-between gap-4 border-b border-[color:var(--brand-border)] pb-6">
@@ -287,7 +428,7 @@ export default function CheckoutPage() {
             Complete your order
           </h1>
           <p className="mt-2 text-sm text-[color:var(--brand-charcoal)]/70">
-            A few details, then choose how you want to pay.
+            Enter your delivery details, then choose how you want to pay.
           </p>
         </div>
 
@@ -300,10 +441,19 @@ export default function CheckoutPage() {
         </Link>
       </div>
 
+      {submitError && (
+        <div
+          role="alert"
+          className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+        >
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+          <p>{submitError}</p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid items-start gap-6 lg:grid-cols-[1.3fr_0.7fr]">
           <div className="space-y-6">
-            {/* Delivery details */}
             <section className={sectionClass}>
               <div className="mb-6 flex items-center gap-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--brand-deep)] text-sm font-bold text-white">
@@ -319,23 +469,96 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              <div className="mb-6 rounded-2xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] p-4 sm:p-5">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[color:var(--brand-white)] text-[color:var(--brand-primary)]">
+                    <MapPin className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <h3 className="font-bold text-[color:var(--brand-deep)]">
+                      Use your current location
+                    </h3>
+                    <p className="mt-1 text-sm leading-5 text-[color:var(--brand-charcoal)]/70">
+                      Let your browser find your location and fill in any address details it can identify. You can edit everything below.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={useMyLocation}
+                  disabled={isLocating}
+                  className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[color:var(--brand-deep)] px-5 py-3 text-sm font-bold text-white transition hover:bg-[color:var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isLocating ? (
+                    <>
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                      Finding your location…
+                    </>
+                  ) : (
+                    <>
+                      <Navigation className="h-4 w-4" />
+                      Use My Location
+                    </>
+                  )}
+                </button>
+
+                {locationMessage && (
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className={`mt-3 flex items-start gap-2 text-xs leading-5 ${
+                      locationMessageType === "error"
+                        ? "text-red-700"
+                        : locationMessageType === "success"
+                          ? "text-green-700"
+                          : "text-[color:var(--brand-charcoal)]/75"
+                    }`}
+                  >
+                    {locationMessageType === "error" ? (
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    ) : (
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                    )}
+                    <span>{locationMessage}</span>
+                  </p>
+                )}
+
+                <p className="mt-3 text-xs leading-5 text-[color:var(--brand-charcoal)]/60">
+                  Your browser will ask permission before sharing your location. If you prefer, skip this and enter your delivery address manually.
+                </p>
+              </div>
+
+              <div className="mb-4 flex items-center gap-3">
+                <div className="h-px flex-1 bg-[color:var(--brand-border)]" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-[color:var(--brand-charcoal)]/55">
+                  Delivery address · editable
+                </span>
+                <div className="h-px flex-1 bg-[color:var(--brand-border)]" />
+              </div>
+
+              {coordinates && (
+                <p className="mb-4 rounded-xl border border-[color:var(--brand-border)] p-3 text-xs leading-5 text-[color:var(--brand-charcoal)]/70">
+                  GPS coordinates captured. Review the address fields below and correct any details that are not accurate.
+                </p>
+              )}
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block sm:col-span-2">
                   <span className="text-sm font-semibold text-[color:var(--brand-deep)]">
                     Full name *
                   </span>
                   <input
+                    id="fullName"
+                    aria-invalid={Boolean(errors.fullName)}
+                    aria-describedby={errors.fullName ? "fullName-error" : undefined}
                     autoComplete="name"
                     value={form.fullName}
                     onChange={(e) => updateField("fullName", e.target.value)}
                     placeholder="Enter your full name"
                     className={inputClass}
                   />
-                  {errors.fullName && (
-                    <span className="mt-1 block text-xs text-red-600">
-                      {errors.fullName}
-                    </span>
-                  )}
+                  {renderError("fullName")}
                 </label>
 
                 <label className="block sm:col-span-2">
@@ -343,42 +566,46 @@ export default function CheckoutPage() {
                     Email address *
                   </span>
                   <input
+                    id="email"
                     type="email"
+                    aria-invalid={Boolean(errors.email)}
+                    aria-describedby={errors.email ? "email-error" : undefined}
                     autoComplete="email"
                     value={form.email}
                     onChange={(e) => updateField("email", e.target.value)}
                     placeholder="you@example.com"
                     className={inputClass}
                   />
-                  {errors.email && (
-                    <span className="mt-1 block text-xs text-red-600">
-                      {errors.email}
-                    </span>
-                  )}
+                  {renderError("email")}
                 </label>
 
                 <label className="block sm:col-span-2">
                   <span className="text-sm font-semibold text-[color:var(--brand-deep)]">
                     Phone number *
                   </span>
-                  <div className="mt-2 flex items-center rounded-xl border border-[color:var(--brand-border)] bg-[color:var(--brand-cream)] focus-within:border-[color:var(--brand-primary)]">
+                  <div
+                    className={`mt-2 flex items-center rounded-xl border bg-[color:var(--brand-cream)] focus-within:border-[color:var(--brand-primary)] ${
+                      errors.phone
+                        ? "border-red-500"
+                        : "border-[color:var(--brand-border)]"
+                    }`}
+                  >
                     <span className="border-r border-[color:var(--brand-border)] px-3 py-3 text-sm font-semibold text-[color:var(--brand-deep)]">
                       +234
                     </span>
                     <input
+                      id="phone"
                       type="tel"
+                      aria-invalid={Boolean(errors.phone)}
+                      aria-describedby={errors.phone ? "phone-error" : undefined}
                       autoComplete="tel-national"
                       value={form.phone}
                       onChange={(e) => updateField("phone", e.target.value)}
                       placeholder="801 234 5678"
-                      className="w-full bg-transparent px-3 py-3 text-sm outline-none"
+                      className="w-full rounded-r-xl bg-transparent px-3 py-3 text-sm outline-none"
                     />
                   </div>
-                  {errors.phone && (
-                    <span className="mt-1 block text-xs text-red-600">
-                      {errors.phone}
-                    </span>
-                  )}
+                  {renderError("phone")}
                 </label>
 
                 <label className="block sm:col-span-2">
@@ -386,17 +613,16 @@ export default function CheckoutPage() {
                     Street address / house number *
                   </span>
                   <input
+                    id="address"
+                    aria-invalid={Boolean(errors.address)}
+                    aria-describedby={errors.address ? "address-error" : undefined}
                     autoComplete="street-address"
                     value={form.address}
                     onChange={(e) => updateField("address", e.target.value)}
-                    placeholder="House number, street and area"
+                    placeholder="House number, street, area or nearby landmark"
                     className={inputClass}
                   />
-                  {errors.address && (
-                    <span className="mt-1 block text-xs text-red-600">
-                      {errors.address}
-                    </span>
-                  )}
+                  {renderError("address")}
                 </label>
 
                 <label className="block">
@@ -404,17 +630,16 @@ export default function CheckoutPage() {
                     City / LGA *
                   </span>
                   <input
+                    id="city"
+                    aria-invalid={Boolean(errors.city)}
+                    aria-describedby={errors.city ? "city-error" : undefined}
                     autoComplete="address-level2"
                     value={form.city}
                     onChange={(e) => updateField("city", e.target.value)}
                     placeholder="Your city or LGA"
                     className={inputClass}
                   />
-                  {errors.city && (
-                    <span className="mt-1 block text-xs text-red-600">
-                      {errors.city}
-                    </span>
-                  )}
+                  {renderError("city")}
                 </label>
 
                 <label className="block">
@@ -422,6 +647,9 @@ export default function CheckoutPage() {
                     State / FCT *
                   </span>
                   <select
+                    id="state"
+                    aria-invalid={Boolean(errors.state)}
+                    aria-describedby={errors.state ? "state-error" : undefined}
                     value={form.state}
                     onChange={(e) => updateField("state", e.target.value)}
                     className={inputClass}
@@ -435,16 +663,11 @@ export default function CheckoutPage() {
                       </option>
                     ))}
                   </select>
-                  {errors.state && (
-                    <span className="mt-1 block text-xs text-red-600">
-                      {errors.state}
-                    </span>
-                  )}
+                  {renderError("state")}
                 </label>
               </div>
             </section>
 
-            {/* Shipping */}
             <section className={sectionClass}>
               <div className="mb-5 flex items-center gap-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--brand-deep)] text-sm font-bold text-white">
@@ -461,63 +684,51 @@ export default function CheckoutPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
-                  aria-pressed={form.shippingMethod === "standard"}
-                  onClick={() => updateField("shippingMethod", "standard")}
-                  className={`rounded-2xl border-2 p-4 text-left transition ${
-                    form.shippingMethod === "standard"
-                      ? "border-[color:var(--brand-deep)] bg-[color:var(--brand-cream)]"
-                      : "border-[color:var(--brand-border)] hover:border-[color:var(--brand-primary)]"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <Truck className="h-5 w-5 text-[color:var(--brand-primary)]" />
-                    {form.shippingMethod === "standard" && (
-                      <CheckCircle2 className="h-4 w-4" />
-                    )}
-                  </div>
-                  <p className="mt-3 font-bold text-[color:var(--brand-deep)]">
-                    Standard dispatch
-                  </p>
-                  <p className="mt-1 text-sm text-[color:var(--brand-charcoal)]/70">
-                    2–4 business days
-                  </p>
-                  <p className="mt-3 font-bold text-[color:var(--brand-deep)]">
-                    {formatPrice(3500)}
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  aria-pressed={form.shippingMethod === "priority"}
-                  onClick={() => updateField("shippingMethod", "priority")}
-                  className={`rounded-2xl border-2 p-4 text-left transition ${
-                    form.shippingMethod === "priority"
-                      ? "border-[color:var(--brand-deep)] bg-[color:var(--brand-cream)]"
-                      : "border-[color:var(--brand-border)] hover:border-[color:var(--brand-primary)]"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <Truck className="h-5 w-5 text-[color:var(--brand-primary)]" />
-                    {form.shippingMethod === "priority" && (
-                      <CheckCircle2 className="h-4 w-4" />
-                    )}
-                  </div>
-                  <p className="mt-3 font-bold text-[color:var(--brand-deep)]">
-                    Priority dispatch
-                  </p>
-                  <p className="mt-1 text-sm text-[color:var(--brand-charcoal)]/70">
-                    Faster processing
-                  </p>
-                  <p className="mt-3 font-bold text-[color:var(--brand-deep)]">
-                    {formatPrice(6500)}
-                  </p>
-                </button>
+                {([
+                  {
+                    id: "standard" as const,
+                    title: "Standard dispatch",
+                    description: "2–4 business days",
+                    price: 3500,
+                  },
+                  {
+                    id: "priority" as const,
+                    title: "Priority dispatch",
+                    description: "Faster processing",
+                    price: 6500,
+                  },
+                ]).map((option) => (
+                  <button
+                    type="button"
+                    key={option.id}
+                    aria-pressed={form.shippingMethod === option.id}
+                    onClick={() => updateField("shippingMethod", option.id)}
+                    className={`rounded-2xl border-2 p-4 text-left transition ${
+                      form.shippingMethod === option.id
+                        ? "border-[color:var(--brand-deep)] bg-[color:var(--brand-cream)]"
+                        : "border-[color:var(--brand-border)] hover:border-[color:var(--brand-primary)]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <Truck className="h-5 w-5 text-[color:var(--brand-primary)]" />
+                      {form.shippingMethod === option.id && (
+                        <CheckCircle2 className="h-4 w-4" />
+                      )}
+                    </div>
+                    <p className="mt-3 font-bold text-[color:var(--brand-deep)]">
+                      {option.title}
+                    </p>
+                    <p className="mt-1 text-sm text-[color:var(--brand-charcoal)]/70">
+                      {option.description}
+                    </p>
+                    <p className="mt-3 font-bold text-[color:var(--brand-deep)]">
+                      {formatPrice(option.price)}
+                    </p>
+                  </button>
+                ))}
               </div>
             </section>
 
-            {/* Payment method */}
             <section className={sectionClass}>
               <div className="mb-5 flex items-center gap-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--brand-deep)] text-sm font-bold text-white">
@@ -534,7 +745,7 @@ export default function CheckoutPage() {
               </div>
 
               <div className="space-y-3">
-                {[
+                {([
                   {
                     id: "card" as const,
                     title: "Pay with Card",
@@ -549,14 +760,7 @@ export default function CheckoutPage() {
                       "Continue to the payment provider for supported transfer instructions.",
                     Icon: Landmark,
                   },
-                  {
-                    id: "pod" as const,
-                    title: "Pay on Delivery",
-                    description:
-                      "Submit your order and pay when it is delivered.",
-                    Icon: PackageCheck,
-                  },
-                ].map(({ id, title, description, Icon }) => (
+                ]).map(({ id, title, description, Icon }) => (
                   <button
                     type="button"
                     key={id}
@@ -570,144 +774,111 @@ export default function CheckoutPage() {
                   >
                     <Icon className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--brand-primary)]" />
                     <span className="min-w-0 flex-1">
-                      <span className="block font-bold text-[color:var(--brand-deep)]">
+                      <span className="flex items-center justify-between gap-3 font-bold text-[color:var(--brand-deep)]">
                         {title}
+                        {form.paymentMethod === id && (
+                          <CheckCircle2 className="h-4 w-4 shrink-0" />
+                        )}
                       </span>
                       <span className="mt-1 block text-sm leading-5 text-[color:var(--brand-charcoal)]/70">
                         {description}
                       </span>
                     </span>
-                    <span
-                      className={`mt-1 h-4 w-4 shrink-0 rounded-full border ${
-                        form.paymentMethod === id
-                          ? "border-[color:var(--brand-deep)] bg-[color:var(--brand-deep)] ring-2 ring-[color:var(--brand-deep)] ring-offset-2"
-                          : "border-gray-400"
-                      }`}
-                    />
                   </button>
                 ))}
               </div>
-
-              {form.paymentMethod !== "pod" && (
-                <div className="mt-4 flex items-start gap-3 rounded-xl bg-[color:var(--brand-cream)] p-4">
-                  <LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--brand-primary)]" />
-                  <div>
-                    <p className="text-sm font-semibold text-[color:var(--brand-deep)]">
-                      Secure payment provider
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-[color:var(--brand-charcoal)]/70">
-                      Payment will continue through a hosted checkout supplied
-                      by the backend. Rebel Fashion does not collect your card
-                      details on this page.
-                    </p>
-                  </div>
-                </div>
-              )}
             </section>
           </div>
 
-          {/* Order summary */}
-          <aside className={`${sectionClass} lg:sticky lg:top-6`}>
-            <h2 className="text-xl font-bold text-[color:var(--brand-deep)]">
-              Order summary
-            </h2>
-            <p className="mt-1 text-sm text-[color:var(--brand-charcoal)]/65">
-              {cart.length} {cart.length === 1 ? "item" : "items"} in your bag
-            </p>
+          <aside className="lg:sticky lg:top-6">
+            <section className={sectionClass}>
+              <h2 className="text-lg font-bold text-[color:var(--brand-deep)]">
+                Order summary
+              </h2>
 
-            <div className="mt-5 max-h-72 space-y-4 overflow-y-auto">
-              {cart.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex gap-3 border-b border-[color:var(--brand-border)] pb-4"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-[color:var(--brand-deep)]">
-                      {item.name}
-                    </p>
-                    <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/65">
-                      {item.color ? `${item.color} · ` : ""}
-                      {item.size ? `${item.size} · ` : ""}
-                      Qty {item.quantity}
+              <div className="mt-5 space-y-4">
+                {cart.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-start justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[color:var(--brand-deep)]">
+                        {item.name}
+                      </p>
+                      <p className="mt-1 text-xs text-[color:var(--brand-charcoal)]/65">
+                        {item.color} / {item.size} · Qty {item.quantity}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-sm font-semibold text-[color:var(--brand-deep)]">
+                      {formatPrice(item.price * item.quantity)}
                     </p>
                   </div>
-                  <p className="shrink-0 text-sm font-semibold text-[color:var(--brand-deep)]">
-                    {formatPrice(item.price * item.quantity)}
-                  </p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            <div className="mt-5 space-y-3 text-sm">
-              <div className="flex justify-between gap-3">
-                <span className="text-[color:var(--brand-charcoal)]/70">
-                  Subtotal
-                </span>
-                <span className="font-medium">{formatPrice(subtotal)}</span>
+              <div className="my-5 border-t border-[color:var(--brand-border)]" />
+
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between gap-4">
+                  <span className="text-[color:var(--brand-charcoal)]/70">
+                    Subtotal
+                  </span>
+                  <span className="font-semibold text-[color:var(--brand-deep)]">
+                    {formatPrice(subtotal)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-[color:var(--brand-charcoal)]/70">
+                    {form.shippingMethod === "priority"
+                      ? "Priority shipping"
+                      : "Standard shipping"}
+                  </span>
+                  <span className="font-semibold text-[color:var(--brand-deep)]">
+                    {formatPrice(shippingCost)}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between gap-3">
-                <span className="text-[color:var(--brand-charcoal)]/70">
-                  {form.shippingMethod === "priority"
-                    ? "Priority dispatch"
-                    : "Standard dispatch"}
-                </span>
-                <span className="font-medium">
-                  {formatPrice(shippingCost)}
-                </span>
-              </div>
-              <div className="flex justify-between gap-3 border-t border-[color:var(--brand-border)] pt-4 text-base">
+
+              <div className="my-5 border-t border-[color:var(--brand-border)]" />
+
+              <div className="flex items-center justify-between gap-4">
                 <span className="font-bold text-[color:var(--brand-deep)]">
-                  Total due
+                  Total
                 </span>
-                <span className="font-extrabold text-[color:var(--brand-deep)]">
+                <span className="text-xl font-extrabold text-[color:var(--brand-deep)]">
                   {formatPrice(finalTotal)}
                 </span>
               </div>
-            </div>
 
-            {submitError && (
-              <div
-                role="alert"
-                className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--brand-deep)] px-6 py-4 text-sm font-bold text-white transition hover:bg-[color:var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {submitError}
-              </div>
-            )}
+                {isSubmitting ? (
+                  "Processing..."
+                ) : (
+                  <>
+                    <LockKeyhole className="h-4 w-4" />
+                    Continue to Payment · {formatPrice(finalTotal)}
+                  </>
+                )}
+              </button>
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[color:var(--brand-deep)] px-5 py-4 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSubmitting ? (
-                "Please wait..."
-              ) : form.paymentMethod === "card" ? (
-                <>
-                  <CreditCard className="h-4 w-4" />
-                  Pay with Card
-                </>
-              ) : form.paymentMethod === "transfer" ? (
-                <>
-                  <Landmark className="h-4 w-4" />
-                  Continue to Bank Transfer
-                </>
-              ) : (
-                <>
-                  <PackageCheck className="h-4 w-4" />
-                  Place Order — Pay on Delivery
-                </>
-              )}
-            </button>
+              <p className="mt-4 flex items-start justify-center gap-2 text-center text-xs leading-5 text-[color:var(--brand-charcoal)]/65">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                Your order and payment will only be confirmed by the server.
+              </p>
 
-            <p className="mt-3 flex items-center justify-center gap-2 text-center text-xs text-[color:var(--brand-charcoal)]/65">
-              <LockKeyhole className="h-3.5 w-3.5" />
-              Your information is used to process your order.
-            </p>
-
-            <p className="mt-4 text-center text-xs leading-5 text-[color:var(--brand-charcoal)]/60">
-              Payment and order confirmation require a successful response from
-              the backend.
-            </p>
+              <Link
+                href="/cart"
+                className="mt-4 flex items-center justify-center gap-2 text-sm font-semibold text-[color:var(--brand-deep)] hover:text-[color:var(--brand-primary)]"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Return to shopping bag
+              </Link>
+            </section>
           </aside>
         </div>
       </form>
